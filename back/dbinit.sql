@@ -1,22 +1,20 @@
-CREATE DATABASE portfolio_stats;
+CREATE ROLE portfolioapp WITH LOGIN;
+
+CREATE DATABASE portfolio_stats WITH OWNER portfolioapp;
 
 \c portfolio_stats;
 
 CREATE TABLE guests (
     guest_id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name TEXT NOT NULL,
-    message TEXT NOT NULL
+    salt TEXT,
+    secret TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL
 );
 
 CREATE TABLE visits (
     visit_id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    guest_id INT REFERENCES guests(guest_id) ON DELETE CASCADE,
     visited_at TIMESTAMP NOT NULL
-);
-
-CREATE TABLE guest_visit (
-    guest_id integer REFERENCES guests(guest_id) ON DELETE CASCADE,
-    visit_data_id integer REFERENCES visits(visit_id) ON DELETE RESTRICT,
-
-    PRIMARY KEY (guest_id, visit_data_id)
 );
 
