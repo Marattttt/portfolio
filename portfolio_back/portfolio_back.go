@@ -1,5 +1,0 @@
-package portfolioback
-
-func main() {
-
-}
