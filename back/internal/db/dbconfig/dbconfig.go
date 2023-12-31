@@ -1,4 +1,4 @@
-package db
+package dbconfig
 
 import (
 	"fmt"
@@ -14,7 +14,7 @@ type DbConfig struct {
 	Port     uint
 }
 
-func GetDSN(config DbConfig) string {
+func (config DbConfig) GetDSN() string {
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%d",
 		config.Host,
@@ -46,22 +46,6 @@ func fillConfig(conf *DbConfig, vpr viper.Viper) error {
 		vpr.SetEnvPrefix("DB")
 	} else {
 		vpr.SetEnvPrefix(previousEnvPrefix + "_DB")
-	}
-
-	if err := vpr.BindEnv("HOSTNAME"); err != nil {
-		return err
-	}
-	if err := vpr.BindEnv("PORT"); err != nil {
-		return err
-	}
-	if err := vpr.BindEnv("USER"); err != nil {
-		return err
-	}
-	if err := vpr.BindEnv("PASS"); err != nil {
-		return err
-	}
-	if err := vpr.BindEnv("DBNAME"); err != nil {
-		return err
 	}
 
 	conf.Host = vpr.GetString("HOSTNAME")
