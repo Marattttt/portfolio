@@ -10,6 +10,8 @@ Docker deployment is to be added
 
 ### Running requires following environment variables: 
 
+listed in .env_example
+
   __For db connection__
   - PORTFOLIO_DB_DBNAME
   - PORTFOLIO_DB_PASS

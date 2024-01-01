@@ -1,0 +1,128 @@
+openapi: 3.0.2
+
+info: 
+  title: Portfolio server
+  description: Marat Bakasov's server API to use for the website
+  version: 1.0.0
+  contact:
+    name: Marat Bakasov
+    email: bakasovmaratt04@gmail.com
+servers: 
+  - url: http://localhost:3121/
+security:
+  - GuestBeare: []
+
+paths:
+  /guests:
+    post:
+      description: Create a new guest
+      requestBody: 
+        required: true
+        content:
+          applicaion/json:
+            schema: 
+              $ref: '#/components/schemas/GuestRequest'
+      responses:
+        '201':
+          description: Guest created successfully
+
+  /guests/{guestId}:
+    parameters: 
+      - name: guestId
+        required: true
+        in: path
+        schema:
+          type: integer
+    get:
+      summary: Get guest data
+      responses:
+        '200':
+          description: Guest data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestResponse'
+        '494': 
+          description: Guest not found
+
+  /authorize:
+    post:
+      summary: Authorize and (if seccessful) get a JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          applicaion/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+
+      responses:
+        '200':
+          description: Successful Authorization
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    description: JWT token for authenticated user
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Reason for unauthorized access
+
+        
+components:
+  schemas:
+    AuthRequest: 
+      type: object
+      properties:
+        guestName:
+          type: string
+        password:
+          type: string
+
+    GuestResponse:
+      type: object
+      properties:
+        name: 
+          type: string
+        secret: 
+          type: string
+
+    GuestRequest:
+      type: object
+      properties:
+        name: 
+          type: string
+        secret: 
+          type: string
+
+    StatsResponse:
+      type: object
+      properties:
+        guestId:
+          type: string
+        visits:
+          type: array
+          items:
+            type: object
+            properties:
+              date: 
+                type: string
+                format: date-time
+              drawings:
+                type: integer
+              linesDrawn:
+                type: integer
+  securitySchemes:
+    GuestBearer:
+      type: http
+      scheme: bearer
