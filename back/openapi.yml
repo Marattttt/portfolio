@@ -8,14 +8,14 @@ info:
     name: Marat Bakasov
     email: bakasovmaratt04@gmail.com
 servers: 
-  - url: http://localhost:3121/
+  - url: https://localhost:3121/
 security:
   - GuestBeare: []
 
 paths:
   /guests:
     post:
-      description: Create a new guest
+      summary: Create a new guest
       requestBody: 
         required: true
         content:

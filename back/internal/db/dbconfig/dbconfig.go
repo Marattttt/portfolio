@@ -1,6 +1,7 @@
 package dbconfig
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/spf13/viper"
@@ -46,6 +47,23 @@ func fillConfig(conf *DbConfig, vpr viper.Viper) error {
 		vpr.SetEnvPrefix("DB")
 	} else {
 		vpr.SetEnvPrefix(previousEnvPrefix + "_DB")
+	}
+
+	bindingErrorStart := "Error bindind env variable "
+	if err := vpr.BindEnv("HOSTNAME"); err != nil {
+		return errors.New(bindingErrorStart + "HOSTNAME")
+	}
+	if err := vpr.BindEnv("PORT"); err != nil {
+		return errors.New(bindingErrorStart + "PORT")
+	}
+	if err := vpr.BindEnv("USER"); err != nil {
+		return errors.New(bindingErrorStart + "USER")
+	}
+	if err := vpr.BindEnv("PASS"); err != nil {
+		return errors.New(bindingErrorStart + "PASS")
+	}
+	if err := vpr.BindEnv("DBNAME"); err != nil {
+		return errors.New(bindingErrorStart + "DBNAME")
 	}
 
 	conf.Host = vpr.GetString("HOSTNAME")
