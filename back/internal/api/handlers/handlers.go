@@ -34,3 +34,8 @@ func (apiServerCodegenWrapper) GetGuestsGuestId(ctx *gin.Context, guestId int) {
 	text := "This is the get guest by id handler and it is not implemented :)"
 	ctx.Writer.Write([]byte(text))
 }
+
+func (apiServerCodegenWrapper) GetStats(ctx *gin.Context) {
+	text := "This is the get stats handler and it is not implemented :)"
+	ctx.Writer.Write([]byte(text))
+}

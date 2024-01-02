@@ -7,10 +7,6 @@ info:
   contact:
     name: Marat Bakasov
     email: bakasovmaratt04@gmail.com
-servers: 
-  - url: https://localhost:3121/
-security:
-  - GuestBeare: []
 
 paths:
   /guests:
@@ -45,10 +41,33 @@ paths:
         '494': 
           description: Guest not found
 
+  /stats:
+    get:
+      summary: Get a guests information; Id is taken from JWT
+      security: 
+        - GuestBearer:
+      responses:
+        '200':
+          desciption: Stats for the authorized user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StatsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Reason for unauthorized access
+
+
   /authorize:
     post:
       summary: Authorize and (if seccessful) get a JWT
-      security: []
       requestBody:
         required: true
         content:

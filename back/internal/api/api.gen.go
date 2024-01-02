@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	GuestBeareScopes = "GuestBeare.Scopes"
+	GuestBearerScopes = "GuestBearer.Scopes"
 )
 
 // AuthRequest defines model for AuthRequest.
@@ -40,6 +41,16 @@ type GuestResponse struct {
 	Secret *string `json:"secret,omitempty"`
 }
 
+// StatsResponse defines model for StatsResponse.
+type StatsResponse struct {
+	GuestId *string `json:"guestId,omitempty"`
+	Visits  *[]struct {
+		Date       *time.Time `json:"date,omitempty"`
+		Drawings   *int       `json:"drawings,omitempty"`
+		LinesDrawn *int       `json:"linesDrawn,omitempty"`
+	} `json:"visits,omitempty"`
+}
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Authorize and (if seccessful) get a JWT
@@ -51,6 +62,9 @@ type ServerInterface interface {
 	// Get guest data
 	// (GET /guests/{guestId})
 	GetGuestsGuestId(c *gin.Context, guestId int)
+	// Get a guests information; Id is taken from JWT
+	// (GET /stats)
+	GetStats(c *gin.Context)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -78,8 +92,6 @@ func (siw *ServerInterfaceWrapper) PostAuthorize(c *gin.Context) {
 // PostGuests operation middleware
 func (siw *ServerInterfaceWrapper) PostGuests(c *gin.Context) {
 
-	c.Set(GuestBeareScopes, []string{})
-
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -104,8 +116,6 @@ func (siw *ServerInterfaceWrapper) GetGuestsGuestId(c *gin.Context) {
 		return
 	}
 
-	c.Set(GuestBeareScopes, []string{})
-
 	for _, middleware := range siw.HandlerMiddlewares {
 		middleware(c)
 		if c.IsAborted() {
@@ -114,6 +124,21 @@ func (siw *ServerInterfaceWrapper) GetGuestsGuestId(c *gin.Context) {
 	}
 
 	siw.Handler.GetGuestsGuestId(c, guestId)
+}
+
+// GetStats operation middleware
+func (siw *ServerInterfaceWrapper) GetStats(c *gin.Context) {
+
+	c.Set(GuestBearerScopes, []string{})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		middleware(c)
+		if c.IsAborted() {
+			return
+		}
+	}
+
+	siw.Handler.GetStats(c)
 }
 
 // GinServerOptions provides options for the Gin server.
@@ -146,22 +171,25 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 	router.POST(options.BaseURL+"/authorize", wrapper.PostAuthorize)
 	router.POST(options.BaseURL+"/guests", wrapper.PostGuests)
 	router.GET(options.BaseURL+"/guests/:guestId", wrapper.GetGuestsGuestId)
+	router.GET(options.BaseURL+"/stats", wrapper.GetStats)
 }
 
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file
