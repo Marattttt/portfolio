@@ -5,7 +5,6 @@ import (
 
 	"github.com/Marattttt/portfolio/portfolio_back/internal/api/handlers"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/db/dbconfig"
-	"github.com/Marattttt/portfolio/portfolio_back/internal/db/models"
 	"github.com/gin-gonic/gin"
 	"github.com/spf13/viper"
 	"gorm.io/driver/postgres"
@@ -22,20 +21,17 @@ func main() {
 
 	dsn := dbConf.GetDSN()
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	_, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	guest := models.Guest{}
-
-	db.Last(&guest)
 
 	r := gin.Default()
 	if err := handlers.SetupHandlers(r); err != nil {
 		log.Fatal(err)
 	}
 
+	vpr.BindEnv("PORT")
 	listenOn := ":" + vpr.GetString("PORT")
 	r.Run(listenOn)
 	log.Fatal("Server stopped working!")
