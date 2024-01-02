@@ -19,3 +19,18 @@ func SetupHandlers(r *gin.Engine) error {
 	r.Use(middleware.OapiRequestValidator(swagger))
 	return nil
 }
+
+func (apiServerCodegenWrapper) PostAuthorize(ctx *gin.Context) {
+	text := "This is the authorization handler and it is not implemented :)"
+	ctx.Writer.Write([]byte(text))
+}
+
+func (apiServerCodegenWrapper) PostGuests(ctx *gin.Context) {
+	text := "This is the post guests handler and it is not implemented :)"
+	ctx.Writer.Write([]byte(text))
+}
+
+func (apiServerCodegenWrapper) GetGuestsGuestId(ctx *gin.Context, guestId int) {
+	text := "This is the get guest by id handler and it is not implemented :)"
+	ctx.Writer.Write([]byte(text))
+}
