@@ -17,14 +17,14 @@ func main() {
 	vpr.SetEnvPrefix("PORTFOLIO")
 	dbConf, err := dbconfig.CreateConfig(*vpr)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	dsn := dbConf.GetDSN()
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	guest := models.Guest{}
@@ -32,7 +32,9 @@ func main() {
 	db.Last(&guest)
 
 	r := gin.Default()
-	handlers.SetupHandlers(r)
+	if err := handlers.SetupHandlers(r); err != nil {
+		log.Fatal(err)
+	}
 
 	listenOn := ":" + vpr.GetString("PORT")
 	r.Run(listenOn)
