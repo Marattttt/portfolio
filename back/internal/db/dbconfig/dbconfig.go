@@ -40,28 +40,35 @@ func CreateConfig(vpr viper.Viper) (*DbConfig, error) {
 }
 
 func fillConfig(conf *DbConfig, vpr viper.Viper) error {
+	// Setting DB as env prefix is bad, because it messes up the viper key bindings
+
 	bindingErrorStart := "Error bindind env variable "
-	if err := vpr.BindEnv("DB_HOSTNAME"); err != nil {
-		return errors.New(bindingErrorStart + "HOSTNAME")
-	}
-	if err := vpr.BindEnv("DB_PORT"); err != nil {
-		return errors.New(bindingErrorStart + "PORT")
-	}
-	if err := vpr.BindEnv("DB_USER"); err != nil {
-		return errors.New(bindingErrorStart + "USER")
-	}
-	if err := vpr.BindEnv("DB_PASS"); err != nil {
-		return errors.New(bindingErrorStart + "PASS")
-	}
-	if err := vpr.BindEnv("DB_DBNAME"); err != nil {
-		return errors.New(bindingErrorStart + "DBNAME")
+
+	vpr.BindEnv("DB_HOSTNAME")
+	vpr.BindEnv("DB_PORT")
+	vpr.BindEnv("DB_USER")
+	vpr.BindEnv("DB_PASS")
+	vpr.BindEnv("DB_DBNAME")
+
+	if conf.Host = vpr.GetString("DB_HOSTNAME"); conf.Host == "" {
+		return errors.New(bindingErrorStart + conf.Host)
 	}
 
-	conf.Host = vpr.GetString("DB_HOSTNAME")
-	conf.Port = vpr.GetUint("DB_PORT")
-	conf.User = vpr.GetString("DB_USER")
-	conf.Password = vpr.GetString("DB_PASS")
-	conf.DbName = vpr.GetString("DB_DBNAME")
+	if conf.Port = vpr.GetUint("DB_PORT"); conf.Port == 0 {
+		return errors.New(bindingErrorStart + fmt.Sprint(conf.Port))
+	}
+
+	if conf.User = vpr.GetString("DB_USER"); conf.User == "" {
+		return errors.New(bindingErrorStart + conf.User)
+	}
+
+	if conf.Password = vpr.GetString("DB_PASS"); conf.Password == "" {
+		return errors.New(bindingErrorStart + conf.Password)
+	}
+
+	if conf.DbName = vpr.GetString("DB_DBNAME"); conf.DbName == "" {
+		return errors.New(bindingErrorStart + conf.DbName)
+	}
 
 	return nil
 }
