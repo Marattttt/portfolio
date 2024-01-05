@@ -38,17 +38,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GuestResponse'
-        '494': 
+        '404': 
+          description: Guest not found
+    patch:
+      summary: Edit the guest data
+      security: 
+        - GuestBearer: []
+      responses:
+        '200':
+          description: Guest updated succeffully
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Reason for unauthorized access
+        '404': 
+          description: Guest not found
+
+  /guests/{guestId}/stats:
+    parameters: 
+      - name: guestId
+        required: true
+        in: path
+        schema:
+          type: integer
+    get:
+      summary: Get guest stats
+      security: 
+        - GuestBearer: []
+      responses:
+        '200':
+          description: Guest data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuestStatsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    description: Reason for unauthorized access
+        '404': 
           description: Guest not found
 
   /stats:
     get:
-      summary: Get a guests information; Id is taken from JWT
-      security: 
-        - GuestBearer:
+      summary: Gets the app's general statistics
       responses:
         '200':
-          desciption: Stats for the authorized user
+          description: Stats for the authorized user
           content:
             application/json:
               schema:
@@ -111,6 +159,8 @@ components:
     GuestResponse:
       type: object
       properties:
+        id: 
+          type: integer
         name: 
           type: string
         secret: 
@@ -124,7 +174,7 @@ components:
         secret: 
           type: string
 
-    StatsResponse:
+    GuestStatsResponse:
       type: object
       properties:
         guestId:
@@ -132,15 +182,29 @@ components:
         visits:
           type: array
           items:
+            $ref: '#/components/schemas/GuestStats'
+    GuestStats:
+      type: object
+      properties:
+        date: 
+          type: string
+          format: date-time
+        drawings:
+          type: integer
+        linesDrawn:
+          type: integer
+    StatsResponse:
+      type: object
+      properties:
+        totalGuests:
+          type: integer
+        totalLinesDrawn:
+          type: integer
+        guests:
+          type: array
+          items:
             type: object
-            properties:
-              date: 
-                type: string
-                format: date-time
-              drawings:
-                type: integer
-              linesDrawn:
-                type: integer
+            $ref: '#/components/schemas/GuestResponse'
   securitySchemes:
     GuestBearer:
       type: http
