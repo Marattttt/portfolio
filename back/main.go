@@ -4,26 +4,28 @@ import (
 	"log"
 
 	"github.com/Marattttt/portfolio/portfolio_back/internal/api/handlers"
+	"github.com/Marattttt/portfolio/portfolio_back/internal/api/middleware"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/appconfig"
 	"github.com/gin-gonic/gin"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
 )
 
 func main() {
-	globalConf, _, err := appconfig.CreateAppConfig()
-	if err != nil {
+	var globalConf appconfig.AppConfig
+	if conf, _, err := appconfig.CreateAppConfig(); err != nil {
 		log.Fatal(err)
+	} else {
+		globalConf = *conf
 	}
 
-	dsn := globalConf.DB.GetDSN()
-
-	_, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
+	// Initialize the dbconnection pool
+	if _, err := globalConf.DB.Connect(); err != nil {
 		log.Fatal(err)
 	}
 
 	r := gin.Default()
+
+	middleware.AddMiddleware(r, &globalConf)
+
 	if err := handlers.SetupHandlers(r); err != nil {
 		log.Fatal(err)
 	}

@@ -5,24 +5,44 @@ import (
 	"fmt"
 
 	"github.com/spf13/viper"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
+// Stores a gorm.DB connection pointer, to share between requests, routines, etc.
 type DbConfig struct {
-	Host     string
-	User     string
-	Password string
-	DbName   string
-	Port     uint
+	host     string
+	user     string
+	password string
+	dbName   string
+	port     uint
+
+	dbconn *gorm.DB
 }
 
-func (config DbConfig) GetDSN() string {
+// If the internal db connection is unset, opens a new one,
+// otherwise, returns the existing connection
+func (conf DbConfig) Connect() (*gorm.DB, error) {
+	if conf.dbconn != nil {
+		return conf.dbconn, nil
+	}
+
+	dsn := conf.getDSN()
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err == nil {
+		conf.dbconn = db
+	}
+	return conf.dbconn, err
+}
+
+func (config DbConfig) getDSN() string {
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%d",
-		config.Host,
-		config.User,
-		config.Password,
-		config.DbName,
-		config.Port)
+		config.host,
+		config.user,
+		config.password,
+		config.dbName,
+		config.port)
 
 	return dsn
 }
@@ -50,24 +70,24 @@ func fillConfig(conf *DbConfig, vpr viper.Viper) error {
 	vpr.BindEnv("DB_PASS")
 	vpr.BindEnv("DB_DBNAME")
 
-	if conf.Host = vpr.GetString("DB_HOSTNAME"); conf.Host == "" {
-		return errors.New(bindingErrorStart + conf.Host)
+	if conf.host = vpr.GetString("DB_HOSTNAME"); conf.host == "" {
+		return errors.New(bindingErrorStart + conf.host)
 	}
 
-	if conf.Port = vpr.GetUint("DB_PORT"); conf.Port == 0 {
-		return errors.New(bindingErrorStart + fmt.Sprint(conf.Port))
+	if conf.port = vpr.GetUint("DB_PORT"); conf.port == 0 {
+		return errors.New(bindingErrorStart + fmt.Sprint(conf.port))
 	}
 
-	if conf.User = vpr.GetString("DB_USER"); conf.User == "" {
-		return errors.New(bindingErrorStart + conf.User)
+	if conf.user = vpr.GetString("DB_USER"); conf.user == "" {
+		return errors.New(bindingErrorStart + conf.user)
 	}
 
-	if conf.Password = vpr.GetString("DB_PASS"); conf.Password == "" {
-		return errors.New(bindingErrorStart + conf.Password)
+	if conf.password = vpr.GetString("DB_PASS"); conf.password == "" {
+		return errors.New(bindingErrorStart + conf.password)
 	}
 
-	if conf.DbName = vpr.GetString("DB_DBNAME"); conf.DbName == "" {
-		return errors.New(bindingErrorStart + conf.DbName)
+	if conf.dbName = vpr.GetString("DB_DBNAME"); conf.dbName == "" {
+		return errors.New(bindingErrorStart + conf.dbName)
 	}
 
 	return nil

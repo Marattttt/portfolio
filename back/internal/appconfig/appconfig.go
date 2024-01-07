@@ -17,6 +17,8 @@ type ServerConfig struct {
 	ListenOn string
 }
 
+// Returns a new config and a setup viper instance if there is no error;
+// If encounters an error, returns all nil except the error
 func CreateAppConfig() (*AppConfig, *viper.Viper, error) {
 	appConf := AppConfig{}
 	vpr := viper.New()
