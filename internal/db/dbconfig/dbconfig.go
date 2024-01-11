@@ -49,7 +49,7 @@ func (config DbConfig) getDSN() string {
 
 // Uses following environment variables (prefix ommitted):
 // "DB_HOSTNAME", "DB_PORT", "DB_USER", "DB_PASS", "DB_DBNAME"
-func CreateConfig(vpr viper.Viper) (*DbConfig, error) {
+func Create(vpr *viper.Viper) (*DbConfig, error) {
 	config := new(DbConfig)
 
 	if err := fillConfig(config, vpr); err != nil {
@@ -59,7 +59,7 @@ func CreateConfig(vpr viper.Viper) (*DbConfig, error) {
 	return config, nil
 }
 
-func fillConfig(conf *DbConfig, vpr viper.Viper) error {
+func fillConfig(conf *DbConfig, vpr *viper.Viper) error {
 	// Setting DB as env prefix is bad, because it messes up the viper key bindings
 
 	bindingErrorStart := "Error bindind env variable "

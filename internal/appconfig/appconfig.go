@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/db/dbconfig"
 	"github.com/spf13/viper"
 )
@@ -11,6 +12,9 @@ import (
 type AppConfig struct {
 	DB     dbconfig.DbConfig
 	Server ServerConfig
+	Log    applog.LogConfig
+
+	Mode string
 }
 
 type ServerConfig struct {
@@ -24,22 +28,44 @@ func CreateAppConfig() (*AppConfig, *viper.Viper, error) {
 	vpr := viper.New()
 	vpr.SetEnvPrefix("PORTFOLIO")
 
-	if serverConf, err := SetupServerConfig(*vpr); err != nil {
+	if mode, err := GetMode(vpr); err != nil {
+		return nil, nil, err
+	} else {
+		appConf.Mode = *mode
+	}
+
+	if serverConf, err := SetupServerConfig(vpr); err != nil {
 		return nil, nil, err
 	} else {
 		appConf.Server = *serverConf
 	}
 
-	if dbConf, err := dbconfig.CreateConfig(*vpr); err != nil {
+	if dbConf, err := dbconfig.Create(vpr); err != nil {
 		return nil, nil, err
 	} else {
 		appConf.DB = *dbConf
 	}
 
+	if logConf, err := applog.CreateLogConfig(vpr, appConf.Mode == "DEBUG"); err != nil {
+		return nil, nil, err
+	} else {
+		appConf.Log = *logConf
+	}
+
 	return &appConf, vpr, nil
 }
 
-func SetupServerConfig(vpr viper.Viper) (*ServerConfig, error) {
+func GetMode(vpr *viper.Viper) (*string, error) {
+	vpr.BindEnv("MODE")
+	appmode := vpr.GetString("MODE")
+	if appmode == "" {
+		return nil, errors.New("Env variable MODE is unset")
+	}
+
+	return &appmode, nil
+}
+
+func SetupServerConfig(vpr *viper.Viper) (*ServerConfig, error) {
 	vpr.BindEnv("PORT")
 	listenOn := vpr.GetString("PORT")
 

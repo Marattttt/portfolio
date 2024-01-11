@@ -9,7 +9,7 @@ type Guests struct {
 	dbconn *gorm.DB
 }
 
-func NewGuest(dbConn *gorm.DB) Guests {
+func NewGuestsRepository(dbConn *gorm.DB) Guests {
 	return Guests{
 		dbconn: dbConn,
 	}
@@ -18,25 +18,25 @@ func NewGuest(dbConn *gorm.DB) Guests {
 func (g Guests) Get(id int) (*gorm.DB, *models.Guest) {
 	var guest models.Guest
 
-	result := g.dbconn.First(&guest, id)
-	return result, &guest
+	res := g.dbconn.First(&guest, id)
+	return res, &guest
 }
 
-func (g Guests) Create(newguest *models.Guest) (*gorm.DB, *models.Guest) {
-	res := g.dbconn.Create(&newguest)
-	return res, newguest
+func (g Guests) Create(newguest models.Guest) (*gorm.DB, *models.Guest) {
+	res := g.dbconn.Create(newguest)
+	return res, &newguest
 }
 
 func (g Guests) Update(id int) (*gorm.DB, *models.Guest) {
 	var guest models.Guest
 
-	result := g.dbconn.Save(&guest)
-	return result, &guest
+	resul := g.dbconn.Save(&guest)
+	return resul, &guest
 }
 
 func (g Guests) Delete(id int) (*gorm.DB, *models.Guest) {
 	var guest models.Guest
 
-	result := g.dbconn.Delete(&guest, id)
-	return result, &guest
+	resul := g.dbconn.Delete(&guest, id)
+	return resul, &guest
 }
