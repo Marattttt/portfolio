@@ -22,16 +22,14 @@ func (g Guests) Get(id int) (*gorm.DB, *models.Guest) {
 	return res, &guest
 }
 
-func (g Guests) Create(newguest models.Guest) (*gorm.DB, *models.Guest) {
+func (g Guests) Create(newguest *models.Guest) *gorm.DB {
 	res := g.dbconn.Create(newguest)
-	return res, &newguest
+	return res
 }
 
-func (g Guests) Update(id int) (*gorm.DB, *models.Guest) {
-	var guest models.Guest
-
+func (g Guests) Update(guest *models.Guest) *gorm.DB {
 	resul := g.dbconn.Save(&guest)
-	return resul, &guest
+	return resul
 }
 
 func (g Guests) Delete(id int) (*gorm.DB, *models.Guest) {
