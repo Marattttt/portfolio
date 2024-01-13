@@ -25,41 +25,41 @@ const (
 
 // AuthRequest defines model for AuthRequest.
 type AuthRequest struct {
-	GuestName *string `json:"guestName,omitempty"`
-	Password  *string `json:"password,omitempty"`
+	GuestName string `json:"guestName"`
+	Password  string `json:"password"`
 }
 
 // GuestRequest defines model for GuestRequest.
 type GuestRequest struct {
-	Name   *string `json:"name,omitempty"`
-	Secret *string `json:"secret,omitempty"`
+	Name   string `json:"name"`
+	Secret string `json:"secret"`
 }
 
 // GuestResponse defines model for GuestResponse.
 type GuestResponse struct {
-	Id     *int    `json:"id,omitempty"`
-	Name   *string `json:"name,omitempty"`
-	Secret *string `json:"secret,omitempty"`
+	Id     int    `json:"id"`
+	Name   string `json:"name"`
+	Secret string `json:"secret"`
 }
 
 // GuestStats defines model for GuestStats.
 type GuestStats struct {
-	Date       *time.Time `json:"date,omitempty"`
-	Drawings   *int       `json:"drawings,omitempty"`
-	LinesDrawn *int       `json:"linesDrawn,omitempty"`
+	Date       time.Time `json:"date"`
+	Drawings   int       `json:"drawings"`
+	LinesDrawn int       `json:"linesDrawn"`
 }
 
 // GuestStatsResponse defines model for GuestStatsResponse.
 type GuestStatsResponse struct {
-	GuestId *string       `json:"guestId,omitempty"`
-	Visits  *[]GuestStats `json:"visits,omitempty"`
+	GuestId string       `json:"guestId"`
+	Visits  []GuestStats `json:"visits"`
 }
 
 // StatsResponse defines model for StatsResponse.
 type StatsResponse struct {
-	Guests          *[]GuestResponse `json:"guests,omitempty"`
-	TotalGuests     *int             `json:"totalGuests,omitempty"`
-	TotalLinesDrawn *int             `json:"totalLinesDrawn,omitempty"`
+	Guests          []GuestResponse `json:"guests"`
+	TotalGuests     int             `json:"totalGuests"`
+	TotalLinesDrawn int             `json:"totalLinesDrawn"`
 }
 
 // ServerInterface represents all server handlers.
@@ -246,21 +246,22 @@ func RegisterHandlersWithOptions(router gin.IRouter, si ServerInterface, options
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"H4sIAAAAAAAC/+xWTY/bNhD9KwRbIC3g2t50Tz51ty2MBG2xyKbIIchhVhrJTCSSnRmt4S783wuSsiyv",
-	"5K7ddA8tcpP4MW/mvcchH3Tmau8sWmG9eNCcrbCG+HnVyOoN/tEgS/j15DySGIyTZRj+DWoMP7LxqBea",
-	"hYwt9XaiPTCvHeUjk9vJbsTdfcRMwvJlCHYUyh5DYcwI5TwM9s4yDkFMP1djBUuksO1fBL8VSBwfIucg",
-	"EaFwVIPoRRz4TkyNejKEzQnWxpY8nm1lLPJPBGs7Nv/3mR3nJmr9Kh+l4d6wSVUZwTp+fE1Y6IX+arZ3",
-	"1qy11axHxD4bIILNeHqnZHYmehdtkMBEixOoll3QIcFxwS9nspzc0pCRzW3IJOUeYa4RCKk7eGHXXRrq",
-	"oqxEvN6GIMYWLizNnBXIovewBlOFTfAJ2N3XQCAyv/yhDOPTzNV6Z2H9a5hT12lhtBJyRsaLcfbx9AtW",
-	"jHSPpK5uXilxqmFUhSMlK1RrvGMj0Z1GqhD6xpEUrjKu3aUn+h6JU+CL6Xw6D3jOowVv9EJ/P51PX+rQ",
-	"JmQVuZhBIytH5s+ksUttICgNIb3gPX3jWK66ZRNNqV9cu3yzIwVt3AfeVyYD4+zsIzu7b2tP+aPf8SLj",
-	"AcMQ5noh1GAcSOaJWb+cz8eRZRz60LviPmFccKjD63dvVZyKfAde0EqIiXlQgYZNYcRwA3VvmyxD5qKp",
-	"1I7DmGXQ5XJ+8RllIJGjYRlvENilGhrbqZsriHn8syJ+7wVKp6qpa6CNXujOGApsrr4xhWLcVfytKlEU",
-	"qNfv3sZds33XOO60tgk8i80OrruTfHYxJDgGURlhdAZ3+labR9T8GJcoUBbXqmwxOxZmD21338Z+iiN0",
-	"LLFlY9neA595DM7o0EMPpLJzEEjWvTzGjHWiCtfYx05ZoiQWuiAeCGoUJNaL9w/ahBihM+1bZ9krvC/U",
-	"pFfV4Br4EPtbthrxVxg+hdKxuhqf7xUvWsH/s4f4HAnbKzSKdHB5vv8QyN5L/HNuJN5UfZ3HLD/j3ZPs",
-	"JOOnd8tzu//wyXPCEfgi/PBs8+6J+VyHO9jpSfc8u2Ge9Epc0L3cekrGp8T/5PJfonCqz/sXrEq0SFBF",
-	"DxgWk3GIt/0rAAD//+FI+ZjqDgAA",
+	"H4sIAAAAAAAC/+xWwW7jNhD9FYItsC3g2s42J52abQsji7YINlvsIchhIo1k7kqkdjiK4Qb+94JDWZYj",
+	"OXEa+NCiN4nkDN+89zjkg05dVTuLlr1OHrRPl1iBfF40vPyAXxv0HH5rcjUSG5TJIgz/ARWGH17XqBPt",
+	"mYwt9Gaia/B+5SgbmdxMNOHXxhBmOrnp5elF3U62Ue7uM6YcUi7CwoNw7CEkHlNCfh6HjRDa5U8A8LWz",
+	"HocITL9YYxkLpBD2amQm05Nj4V0zRBn3sWXAgiF3VAHrRAZ+YCM5B8AygpWxhR+vpzQW/S8EKzs2/wi7",
+	"bNzLuBf+dBWHmRbLXGajpN4bbyIDhrGSj28Jc53ob2Y7o89al896pG06NEAE63GjXgYt2j3G4B+D/IXo",
+	"umwDgBPNjqFcdEmHYsmC316iWD/lMH6yLWFYfHR0Q4bX1wF/rFgyvUMgpK67hKi7ONRlWTLXehOSGJu7",
+	"sDR1liGV84EVmDIEwRfw7r4CAub5+U9FGJ+mrtoekET/HubUu7hQzIw+JVOzcfbx9BuvPNI9krq4ulTs",
+	"VONR5Y4UL1Gt8M4bMS8bLkPqK0ecu9K4Nio4AcnHxGfT+XQe9nM1WqiNTvSP0/n0rXQ1XgoXM2h46cj8",
+	"FZ3hYh8L/oAALzhaXznPF92yKE1g0GXrLSloJQ7qujQpGGdnn72zu979nKv6bX2zLz9TgzIQLSeo387n",
+	"4zvz+Nb7jmf3BWXBvg7vP31UMiV8B17QcsiJWVCBhm1pMzTcQN3rJk3R+7wp1ZZDQRl0OZ+fvaIMJHI0",
+	"LOMDgnexhsZ26mYKBMc/K+LPXqJ4qpqqAlrrRHfGUGAz9Z3Jlcdtxd+rAlmBev/po0TNdr3msNO6c34C",
+	"m+3d10f57GxIsCRRKaE4w3f6lutH1PwsSxQoiytVtHt2LMwe2u69kS6MI3QssGVj0fX5Vx2DF/T1oQdi",
+	"2RkwROueH2LGOla5a+xjpyyQIwtdkhoIKmQkr5ObB21CjtCZdq2z6BXeF2rSq2pwedxKf0uXI/4Kw8dQ",
+	"OlZXU2c7xfNW8H/tIX6JhO0VKiLtXZ43t4HsncS/ZoblpurrPGb5md8+Co8yfnwNndr9+w+lI47A/8IP",
+	"z7bfPlxPdbiDnZ51z8kN86xXZEH3cuspKU+J/8jlv0D2sb66fuNVgRYJSvGA8WxSH/Jt/g4AAP//OwfG",
+	"dM8PAAA=",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

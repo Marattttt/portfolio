@@ -13,7 +13,7 @@ import (
 func main() {
 	var globalConf appconfig.AppConfig
 	if conf, _, err := appconfig.CreateAppConfig(); err != nil {
-		log.Fatalf(applog.ConfigError, err)
+		log.Fatalf(applog.Config, err)
 	} else {
 		globalConf = *conf
 	}
@@ -22,7 +22,7 @@ func main() {
 
 	// Initialize the dbconnection pool
 	if _, err := globalConf.DB.Connect(); err != nil {
-		applog.Fatal(applog.DbError, err)
+		applog.Fatal(applog.Db, err)
 	}
 
 	r := gin.Default()
@@ -30,9 +30,9 @@ func main() {
 	middleware.AddMiddleware(r, &globalConf)
 
 	if err := handlers.SetupHandlers(r); err != nil {
-		applog.Fatal(applog.HttpError, err)
+		applog.Fatal(applog.Http, err)
 	}
 
 	r.Run(globalConf.Server.ListenOn)
-	applog.Fatal(applog.UnknownError, "Server stopped working")
+	applog.Fatal("Server stopped working")
 }
