@@ -9,8 +9,8 @@ GRANT ALL PRIVILEGES ON DATABASE portfolio_stats TO portfolioapp;
 CREATE TABLE guests (
     guest_id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name TEXT NOT NULL,
-    salt TEXT,
-    secret TEXT NOT NULL,
+    salt BYTEA NOT NULL,
+    secret BYTEA NOT NULL,
     created_at TIMESTAMP NOT NULL
 );
 

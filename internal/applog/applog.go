@@ -27,6 +27,7 @@ const (
 	Config = "(Config) %v"
 	Db     = "(DB) %v"
 	Http   = "(HTTP) %v"
+	Auth   = "(Auth) %v"
 )
 
 // Needs to be run before any use of the package

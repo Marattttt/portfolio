@@ -6,7 +6,7 @@ import (
 )
 
 func ToGuest(r GuestRequest) models.Guest {
-	pass, hash := auth.HashPassword([]byte(r.Secret))
+	pass, hash := auth.HashSecret([]byte(r.Secret))
 	return models.Guest{
 		Name:   r.Name,
 		Secret: string(pass),

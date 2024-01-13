@@ -23,9 +23,6 @@ func (g Guests) Get(id int) (*gorm.DB, *models.Guest) {
 }
 
 func (g Guests) Create(newguest *models.Guest) *gorm.DB {
-	if g.dbconn == nil {
-		panic("ehee")
-	}
 	res := g.dbconn.Create(newguest)
 	return res
 }
