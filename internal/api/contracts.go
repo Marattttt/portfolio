@@ -6,18 +6,16 @@ import (
 )
 
 func ToGuest(r GuestRequest) models.Guest {
-	pass, hash := auth.HashSecret([]byte(r.Secret))
+	secret, hash := auth.HashSecret(r.Secret)
 	return models.Guest{
 		Name:   r.Name,
-		Secret: string(pass),
-		Salt:   string(hash),
+		Secret: secret, Salt: hash,
 	}
 }
 
 func ToGuestResponse(g models.Guest) GuestResponse {
 	return GuestResponse{
-		Id:     int(g.ID),
-		Name:   g.Name,
-		Secret: g.Secret,
+		Id:   int(g.ID),
+		Name: g.Name,
 	}
 }

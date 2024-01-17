@@ -27,10 +27,7 @@ func addDbConnPooling(r *gin.Engine, dbconf dbconfig.DbConfig) {
 		if conn, err := dbconf.Connect(); err != nil || conn == nil {
 			log.Fatal("Error occured while adding db pooling middleware\n", err)
 		} else {
-			log.Println(conn == nil)
 			dbconn = conn.WithContext(timeoutContext)
-
-			log.Println(conn == nil)
 		}
 
 		ctx.Set("DB", dbconn)

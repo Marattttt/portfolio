@@ -3,10 +3,10 @@ package models
 import "time"
 
 type Guest struct {
-	ID        uint   `gorm:"column:guest_id"`
-	Name      string `gorm:"type:bytea"`
-	Salt      string `gorm:"type:bytea"`
-	Secret    string
+	ID        uint `gorm:"column:guest_id"`
+	Name      string
+	Salt      []byte `gorm:"type:bytea"`
+	Secret    []byte `gorm:"type:bytea"`
 	CreatedAt time.Time
 
 	Visits []Visit

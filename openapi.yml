@@ -151,11 +151,11 @@ components:
     AuthRequest: 
       type: object
       required: 
-        - guestName
+        - id
         - password
       properties:
-        guestName:
-          type: string
+        id:
+          type: integer
         password:
           type: string
 
@@ -164,13 +164,10 @@ components:
       required: 
         - id
         - name
-        - secret
       properties:
         id: 
           type: integer
         name: 
-          type: string
-        secret: 
           type: string
 
     GuestRequest:
