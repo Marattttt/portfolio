@@ -92,7 +92,7 @@ func (apiServerCodegenWrapper) PostGuests(ctx *gin.Context) {
 	guest := api.ToGuest(*guestRequest)
 
 	if g, err := service.NewGuest(guest); err != nil {
-		applog.Error(applog.Db, err)
+		applog.Error(applog.DB, err)
 
 		ctx.Writer.WriteString("Could not save guest")
 		ctx.Status(http.StatusBadGateway)

@@ -5,18 +5,17 @@ import (
 	"log"
 	"time"
 
-	"github.com/Marattttt/portfolio/portfolio_back/internal/appconfig"
-	"github.com/Marattttt/portfolio/portfolio_back/internal/db/dbconfig"
+	"github.com/Marattttt/portfolio/portfolio_back/internal/config"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
 
 // Adds a db connection from the config as "DB", with a 1 second timeout and a cancel func to call in the request as "DB_CANCEl";
-func AddMiddleware(r *gin.Engine, conf *appconfig.AppConfig) {
+func AddMiddleware(r *gin.Engine, conf *config.AppConfig) {
 	addDbConnPooling(r, conf.DB)
 }
 
-func addDbConnPooling(r *gin.Engine, dbconf dbconfig.DbConfig) {
+func addDbConnPooling(r *gin.Engine, dbconf config.DbConfig) {
 	r.Use(func(ctx *gin.Context) {
 		var timeoutContext context.Context
 		var cancel context.CancelFunc

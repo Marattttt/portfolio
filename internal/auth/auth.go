@@ -3,9 +3,7 @@ package auth
 import (
 	"crypto/rand"
 	"fmt"
-	"unicode"
 
-	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -17,69 +15,61 @@ const (
 	SaltSize = 32
 )
 
-type ErrDataTooLong struct{}
+type DataTooLongError struct{}
 
-func (e ErrDataTooLong) Error() string {
-	return fmt.Sprintf("Data too long")
+func (e DataTooLongError) Error() string {
+	return "Data too long"
 }
 
 // Returns the hased password and the salt used to hash it
-func HashSecret(secret string) ([]byte, []byte) {
-	salt := getRandomSalt()
+func HashSecret(secret string) ([]byte, []byte, error) {
+	salt, err := getRandomSalt()
+	if err != nil {
+		return nil, nil, err
+	}
 
-	hashed := hashSecret([]byte(secret), salt)
+	hashed, err := hashSecret([]byte(secret), salt)
+	if err != nil {
+		return nil, nil, err
+	}
 
-	return hashed, salt
+	return hashed, salt, nil
 }
 
-// Returns ErrDataTooLong if the data passed is too long
+// If data is too long returns DataTooLongError
 func Validate(hashed, salt []byte, unhashed string) error {
 	if len(unhashed) > SecretLength || len(salt) > SaltSize {
-		return ErrDataTooLong{}
+		return DataTooLongError{}
 	}
 
 	secret := append([]byte(unhashed), salt...)
 
 	if err := bcrypt.CompareHashAndPassword(hashed, secret); err != nil {
-		return err
+		return fmt.Errorf("while comparing password: %w", err)
 	}
 
 	return nil
 }
 
 // Returns hashed password and the salt used
-func hashSecret(secret, salt []byte) []byte {
+func hashSecret(secret, salt []byte) ([]byte, error) {
 	secret = append(secret, salt...)
 
 	hashed, err := bcrypt.GenerateFromPassword(secret, bcrypt.DefaultCost)
 
 	if err != nil {
-		applog.Fatal(applog.Auth, err)
+		return nil, fmt.Errorf("generating new password: %w", err)
 	}
 
-	return hashed
+	return hashed, nil
 }
 
-func getRandomSalt() []byte {
+func getRandomSalt() ([]byte, error) {
 	salt := make([]byte, SaltSize)
 
 	if _, err := rand.Read(salt); err != nil {
-		applog.Fatal(applog.Auth, err)
+		return nil, fmt.Errorf("while generating new random salt: %w", err)
 	}
 
-	return salt
-}
-
-func getAsciiBytes(str string) *[]byte {
-	bytes := make([]byte, len(str))
-
-	for _, c := range str {
-		if c > unicode.MaxASCII {
-			return nil
-		}
-
-		bytes = append(bytes, byte(c))
-	}
-
-	return &bytes
+	return salt, nil
 }

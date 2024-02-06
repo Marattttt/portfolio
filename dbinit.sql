@@ -7,11 +7,12 @@ GRANT ALL PRIVILEGES ON DATABASE portfolio_stats TO portfolioapp;
 \c portfolio_stats
 
 CREATE TABLE guests (
-    guest_id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    id INT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
     name TEXT NOT NULL,
     salt BYTEA NOT NULL,
     secret BYTEA NOT NULL,
-    created_at TIMESTAMP NOT NULL
+    created_at TIMESTAMP NOT NULL,
+    deleted_at TIMESTAMP 
 );
 
 GRANT ALL PRIVILEGES ON guests TO portfolioapp;
