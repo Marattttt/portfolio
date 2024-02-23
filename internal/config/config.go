@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Marattttt/portfolio/portfolio_back/internal/config/dbconfig"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config/logconfig"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config/serverconfig"
+	"github.com/Marattttt/portfolio/portfolio_back/internal/config/storageconfig"
 	"github.com/spf13/viper"
 )
 
 type AppConfig struct {
-	DB     dbconfig.DbConfig
-	Server serverconfig.ServerConfig
-	Log    logconfig.LogConfig
+	Storage storageconfig.StorageConfig
+	Server  serverconfig.ServerConfig
+	Log     logconfig.LogConfig
 
 	Mode Mode
 }
@@ -54,11 +54,11 @@ func New() (*AppConfig, error) {
 	}
 	conf.Server = *server
 
-	db, err := dbconfig.New(vpr)
+	db, err := storageconfig.New(vpr)
 	if err != nil {
-		return nil, fmt.Errorf("creating db config: %w", err)
+		return nil, fmt.Errorf("creating storage config: %w", err)
 	}
-	conf.DB = *db
+	conf.Storage = *db
 
 	isDebug := conf.Mode == Debug
 	log, err := logconfig.New(vpr, isDebug)

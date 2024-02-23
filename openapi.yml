@@ -59,60 +59,6 @@ paths:
                     description: Reason for unauthorized access
         '404': 
           description: Guest not found
-
-  /guests/{guestId}/stats:
-    parameters: 
-      - name: guestId
-        required: true
-        in: path
-        schema:
-          type: integer
-    get:
-      summary: Get guest stats
-      security: 
-        - GuestBearer: []
-      responses:
-        '200':
-          description: Guest data
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GuestStatsResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    description: Reason for unauthorized access
-        '404': 
-          description: Guest not found
-
-  /stats:
-    get:
-      summary: Gets the app's general statistics
-      responses:
-        '200':
-          description: Stats for the authorized user
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/StatsResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    description: Reason for unauthorized access
-
-
   /authorize:
     post:
       summary: Authorize and (if seccessful) get a JWT
@@ -180,49 +126,6 @@ components:
           type: string
         secret: 
           type: string
-
-    GuestStatsResponse:
-      type: object
-      required:
-        - guestId
-        - visits
-      properties:
-        guestId:
-          type: string
-        visits:
-          type: array
-          items:
-            $ref: '#/components/schemas/GuestStats'
-    GuestStats:
-      type: object
-      required: 
-        - date
-        - drawings
-        - linesDrawn
-      properties:
-        date: 
-          type: string
-          format: date-time
-        drawings:
-          type: integer
-        linesDrawn:
-          type: integer
-    StatsResponse:
-      type: object
-      required: 
-        - totalGuests
-        - totalLinesDrawn
-        - guests
-      properties:
-        totalGuests:
-          type: integer
-        totalLinesDrawn:
-          type: integer
-        guests:
-          type: array
-          items:
-            type: object
-            $ref: '#/components/schemas/GuestResponse'
   securitySchemes:
     GuestBearer:
       type: http

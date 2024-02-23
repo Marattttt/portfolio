@@ -16,17 +16,16 @@ linters:
     - lll
     - maintidx
     - misspell
+    - nilnil
     - prealloc
     - revive
     - rowserrcheck
     - sloglint
-    - sqlclosecheck
     - unconvert
     - unparam
     - unused
     - wastedassign
     - whitespace
-    - wrapcheck
 
 run:
   skip-dirs:

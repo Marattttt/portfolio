@@ -1,6 +1,7 @@
 package applog
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -10,15 +11,12 @@ import (
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config/logconfig"
 )
 
+// All types implementing logger interface are safe to pass by reference
 type Logger interface {
-	Debug(s Scope, msg string, v ...slog.Attr)
-	Error(s Scope, msg string, v ...slog.Attr)
-	Info(s Scope, msg string, v ...slog.Attr)
-}
-
-type AppLogger struct {
-	out  *slog.Logger
-	conf logconfig.LogConfig
+	Debug(ctx context.Context, s Scope, msg string, attrs ...slog.Attr)
+	Error(ctx context.Context, s Scope, msg string, err error, attrs ...slog.Attr)
+	Info(ctx context.Context, s Scope, msg string, attrs ...slog.Attr)
+	Warn(ctx context.Context, s Scope, msg string, attrs ...slog.Attr)
 }
 
 type Scope int
@@ -32,6 +30,8 @@ const (
 	Config
 	// Scope flag for DB
 	DB
+	// Scope flag for logs not related to anythning
+	Generic
 	// Scope flag for HTTP
 	HTTP
 
@@ -56,6 +56,9 @@ func (s Scope) LogValue() slog.Value {
 	}
 	if s&Auth == Auth {
 		scopes = append(scopes, "auth")
+	}
+	if s&Generic == Generic {
+		scopes = append(scopes, "generic")
 	}
 
 	return slog.AnyValue(scopes)
@@ -83,37 +86,53 @@ func (s Scope) String() string {
 	return scopes.String()
 }
 
-// The values provided should be alternating between string as key and any as value
-// Example:
-// applog.Error(applog.S_DB, "Failed to do something", "cause", err)
-func (l AppLogger) Error(s Scope, msg string, values ...any) {
-	scoped := l.out.With(scopeAttrKey, s)
-
-	scoped.Error(msg, values...)
+// Default logger impementation that wraps around the std slog package
+type AppLogger struct {
+	out  *slog.Logger
+	conf *logconfig.LogConfig
 }
 
-// The values provided should be alternating between string as key and any as value
 // Example:
-// applog.Error(applog.S_DB, "Failed to do something", "cause", err)
-func (l AppLogger) Info(s Scope, msg string, values ...any) {
+// logger.Error(ctx, applog.DB|applog.Config, "reading file", err, nil)
+// or
+// Example: logger.Error(ctx, applog.DB|applog.Config, "reading file", err, slog.String("somedata", data))
+func (l AppLogger) Error(ctx context.Context, s Scope, msg string, err error, attrs ...slog.Attr) {
 	scoped := l.out.With(scopeAttrKey, s)
 
-	scoped.Info(msg, values...)
+	attrs = append(attrs, slog.Any("err", err))
+
+	scoped.LogAttrs(ctx, slog.LevelError, msg, attrs...)
 }
 
-// The values provided should be alternating between string as key and any as value
-// Example:
-// applog.Error(applog.S_DB, "Failed to do something", "cause", err)
-func (l AppLogger) Warn(s Scope, msg string, values ...any) {
+// Example: logger.Info(ctx, applog.DB|applog.Config, "reading file", slog.String("somedata", data))
+func (l AppLogger) Info(ctx context.Context, s Scope, msg string, attrs ...slog.Attr) {
 	scoped := l.out.With(scopeAttrKey, s)
 
-	scoped.Warn(msg, values...)
+	scoped.LogAttrs(ctx, slog.LevelInfo, msg, attrs...)
+}
+
+// Example: logger.Warn(ctx, applog.DB|applog.Config, "reading file", slog.String("somedata", data))
+func (l AppLogger) Warn(ctx context.Context, s Scope, msg string, attrs ...slog.Attr) {
+	scoped := l.out.With(scopeAttrKey, s)
+
+	scoped.LogAttrs(ctx, slog.LevelWarn, msg, attrs...)
+}
+
+// Example: logger.Debug(ctx, applog.DB|applog.Config, "reading file", slog.String("somedata", data))
+func (l AppLogger) Debug(ctx context.Context, s Scope, msg string, attrs ...slog.Attr) {
+	if !l.conf.IsDebugMode {
+		return
+	}
+
+	scoped := l.out.With(scopeAttrKey, s)
+
+	scoped.LogAttrs(ctx, slog.LevelDebug, msg, attrs...)
 }
 
 // Create new logger
 func New(conf logconfig.LogConfig) (*AppLogger, error) {
 	var logger AppLogger
-	logger.conf = conf
+	logger.conf = &conf
 
 	if err := logger.configureOutput(conf.LogDest); err != nil {
 		return nil, err

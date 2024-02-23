@@ -12,7 +12,7 @@ type LogConfig struct {
 	LogDest     string
 	Format      LogFormat
 	IsDebugMode bool
-	Flags       LogFlags
+	Flags       LogFlags `json:"-"`
 }
 
 type LogFlags struct {
