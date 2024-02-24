@@ -21,6 +21,11 @@ type DbConfig struct {
 	ConnParams ConnParams
 }
 
+func (c *DbConfig) Close() error {
+	c.Pool.Close()
+	return nil
+}
+
 // Environment
 const (
 	envPrefix            = "DB_"

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -31,46 +32,35 @@ func main() {
 
 	// Server
 	go func() {
-		return
-
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error(appctx, applog.Application, "Error during s", err)
+			logger.Error(appctx, applog.Application, "Unexpected server shutdown", err)
 		}
 	}()
 
 	<-appctx.Done()
 
 	const shutdownTimeout = time.Second * 2
-	shutdownErrs := make(chan error, 100)
-	shutdownctx, stopshutdown := context.WithTimeout(context.Background(), shutdownTimeout)
-	defer stopshutdown()
+	shutdownErrors := make(chan error, 100)
+	shutdownctx, stopShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer stopShutdown()
 
-	logger.Info(shutdownctx, applog.Application, "Beginning shutdown")
-	// Shutdown
-	go func() {
-		defer stopshutdown()
+	logger.Info(shutdownctx, applog.Application, "Beginning shutdown", slog.Duration("timeout", shutdownTimeout))
 
-		err := server.Shutdown(shutdownctx)
-		if err != nil {
-			shutdownErrs <- fmt.Errorf("shutting down http server: %w", err)
-		}
-	}()
+	go shutdownServer(shutdownctx, shutdownErrors, server)
+
+	go shutdownConfig(shutdownctx, shutdownErrors, &conf)
 
 	<-shutdownctx.Done()
 
 	if shutdownctx.Err() == context.DeadlineExceeded {
-		logger.Error(context.Background(), applog.Application, "Shutdown timed out", fmt.Errorf("shutting down took longer than %s", shutdownTimeout.String()))
+		logger.Error(
+			context.Background(),
+			applog.Application,
+			"Shutdown timed out",
+			fmt.Errorf("shutting down took longer than %s", shutdownTimeout.String()))
 	}
 
-	// Log all errrors
-	errors := make([]error, 0, len(shutdownErrs))
-	for len(shutdownErrs) > 0 {
-		errors = append(errors, <-shutdownErrs)
-	}
-
-	for _, err := range errors {
-		logger.Error(context.Background(), applog.Application, "During shutdown", err)
-	}
+	printErrors(logger, shutdownErrors)
 }
 
 func initAppConfig() config.AppConfig {
@@ -95,4 +85,28 @@ func printConfig(conf config.AppConfig) {
 		log.Fatalf("Marshalling created config: %v", err)
 	}
 	log.Println("Beginning start up using config: \n" + string(marshalledConf))
+}
+
+func shutdownServer(ctx context.Context, errs chan error, server *http.Server) {
+	if err := server.Shutdown(ctx); err != nil {
+		errs <- fmt.Errorf("shutting down http server: %w", err)
+	}
+}
+
+func shutdownConfig(ctx context.Context, errs chan error, conf *config.AppConfig) {
+	if err := conf.Close(ctx); err != nil {
+		errs <- fmt.Errorf("closing config resources: %w", err)
+	}
+}
+
+func printErrors(logger applog.Logger, errs chan error) {
+	// Log all errrors
+	errors := make([]error, 0, len(errs))
+	for len(errs) > 0 {
+		errors = append(errors, <-errs)
+	}
+
+	for _, err := range errors {
+		logger.Error(context.Background(), applog.Application, "During shutdown", err)
+	}
 }

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -16,6 +17,10 @@ type AppConfig struct {
 	Log     logconfig.LogConfig
 
 	Mode Mode
+}
+
+func (c *AppConfig) Close(ctx context.Context) error {
+	return c.Storage.Close(ctx)
 }
 
 type Mode int
