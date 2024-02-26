@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -20,7 +21,7 @@ import (
 
 func main() {
 	cancelsignals := []os.Signal{syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM}
-	appctx, appcancel := signal.NotifyContext(context.Background(), cancelsignals...)
+	appCtx, appcancel := signal.NotifyContext(context.Background(), cancelsignals...)
 	defer appcancel()
 
 	conf := initAppConfig()
@@ -28,31 +29,47 @@ func main() {
 
 	logger := initLogger(&conf)
 
-	server := api.NewServer(appctx, logger, &conf)
+	server := api.NewServer(appCtx, logger, &conf)
 
 	// Server
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error(appctx, applog.Application, "Unexpected server shutdown", err)
+			logger.Error(appCtx, applog.Application, "Unexpected server shutdown", err)
 		}
+		appcancel()
 	}()
 
-	<-appctx.Done()
+	<-appCtx.Done()
 
-	const shutdownTimeout = time.Second * 2
+	const shutdownTimeout = time.Second * 20
+
 	shutdownErrors := make(chan error, 100)
-	shutdownctx, stopShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
+	shutdownSuccess := make(chan struct{})
+
+	shutdownWg := sync.WaitGroup{}
+
+	timeoutCtx, stopShutdown := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer stopShutdown()
 
-	logger.Info(shutdownctx, applog.Application, "Beginning shutdown", slog.Duration("timeout", shutdownTimeout))
+	logger.Info(timeoutCtx, applog.Application, "Beginning shutdown", slog.Duration("timeout", shutdownTimeout))
 
-	go shutdownServer(shutdownctx, shutdownErrors, server)
+	shutdownWg.Add(1)
+	go shutdownServer(timeoutCtx, &shutdownWg, shutdownErrors, server)
+	shutdownWg.Add(1)
+	go shutdownConfig(timeoutCtx, &shutdownWg, shutdownErrors, &conf)
+	go func() {
+		shutdownWg.Wait()
+		shutdownSuccess <- struct{}{}
+	}()
 
-	go shutdownConfig(shutdownctx, shutdownErrors, &conf)
-
-	<-shutdownctx.Done()
-
-	if shutdownctx.Err() == context.DeadlineExceeded {
+	select {
+	case <-shutdownSuccess:
+		logger.Info(
+			timeoutCtx,
+			applog.Application,
+			"Shutdown complete",
+		)
+	case <-timeoutCtx.Done():
 		logger.Error(
 			context.Background(),
 			applog.Application,
@@ -87,26 +104,24 @@ func printConfig(conf config.AppConfig) {
 	log.Println("Beginning start up using config: \n" + string(marshalledConf))
 }
 
-func shutdownServer(ctx context.Context, errs chan error, server *http.Server) {
+func shutdownServer(ctx context.Context, wg *sync.WaitGroup, errs chan error, server *http.Server) {
+	defer wg.Done()
 	if err := server.Shutdown(ctx); err != nil {
 		errs <- fmt.Errorf("shutting down http server: %w", err)
 	}
 }
 
-func shutdownConfig(ctx context.Context, errs chan error, conf *config.AppConfig) {
+func shutdownConfig(ctx context.Context, wg *sync.WaitGroup, errs chan error, conf *config.AppConfig) {
+	defer wg.Done()
 	if err := conf.Close(ctx); err != nil {
 		errs <- fmt.Errorf("closing config resources: %w", err)
 	}
 }
 
 func printErrors(logger applog.Logger, errs chan error) {
-	// Log all errrors
-	errors := make([]error, 0, len(errs))
-	for len(errs) > 0 {
-		errors = append(errors, <-errs)
-	}
-
-	for _, err := range errors {
+	errcount := len(errs)
+	for i := 0; i < errcount; i++ {
+		err := <-errs
 		logger.Error(context.Background(), applog.Application, "During shutdown", err)
 	}
 }

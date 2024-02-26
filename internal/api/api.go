@@ -14,7 +14,6 @@ import (
 )
 
 type apiServerCodegenWrapper struct {
-	apigen.Unimplemented
 }
 
 var (
@@ -64,4 +63,12 @@ func (apiServerCodegenWrapper) GetGuestsGuestId(w http.ResponseWriter, r *http.R
 	}
 
 	_, _ = w.Write(data)
+}
+
+func (apiServerCodegenWrapper) PostAuthorize(w http.ResponseWriter, r *http.Request) {
+
+}
+func (apiServerCodegenWrapper) PostGuests(w http.ResponseWriter, r *http.Request) {}
+
+func (apiServerCodegenWrapper) PatchGuestsGuestId(w http.ResponseWriter, r *http.Request, guestId int) {
 }
