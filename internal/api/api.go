@@ -51,13 +51,13 @@ func (apiServerCodegenWrapper) GetGuestsGuestId(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	reqquested := guests.GetGuest(ctx, guestId)
-	if reqquested == nil {
+	reuested := guests.GetGuest(ctx, guestId)
+	if reuested == nil {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return
 	}
 
-	data, err := json.Marshal(reqquested)
+	data, err := json.Marshal(reuested)
 	if err != nil {
 		logger.Error(ctx, applog.Generic, "Failed to encode guest model", err)
 	}
