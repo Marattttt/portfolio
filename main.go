@@ -17,6 +17,7 @@ import (
 	"github.com/Marattttt/portfolio/portfolio_back/internal/api"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config"
+	"github.com/go-chi/chi/v5"
 )
 
 func main() {
@@ -30,14 +31,39 @@ func main() {
 
 	logger := initLogger(&conf)
 
-	server := api.NewServer(appCtx, logger, &conf)
+	server := http.Server{
+		Handler: api.NewMux(appCtx, logger, &conf),
+		Addr:    conf.Server.ListenOn,
+	}
 
 	// Server
 	go func() {
+		hnldr := chi.NewMux()
+		hnldr.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("This is a response"))
+		})
+
+		// if err := http.ListenAndServe(conf.Server.ListenOn, hnldr); err != nil {
+		// 	logger.Error(appCtx, applog.Application, "Unexpected server shutdown", err)
+		// }
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			logger.Error(appCtx, applog.Application, "Unexpected server shutdown", err)
 		}
 		appcancel()
+	}()
+
+	go func() {
+		counter := 0
+		for {
+			select {
+			case <-appCtx.Done():
+				return
+			case <-time.After(time.Second * 2):
+				slog.Info("Still working", slog.Int("counter", counter))
+				logger.Info(context.Background(), applog.Application, "Still working", slog.Int("counter", counter))
+				counter++
+			}
+		}
 	}()
 
 	<-appCtx.Done()
@@ -55,7 +81,7 @@ func main() {
 	logger.Info(timeoutCtx, applog.Application, "Beginning shutdown", slog.Duration("timeout", shutdownTimeout))
 
 	shutdownWg.Add(1)
-	go shutdownServer(timeoutCtx, &shutdownWg, shutdownErrors, server)
+	go shutdownServer(timeoutCtx, &shutdownWg, shutdownErrors, &server)
 	shutdownWg.Add(1)
 	go shutdownConfig(timeoutCtx, &shutdownWg, shutdownErrors, &conf)
 	go func() {

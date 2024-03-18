@@ -3,10 +3,9 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"net"
 	"net/http"
+	"sync/atomic"
 
-	"github.com/Marattttt/portfolio/portfolio_back/internal/api/apigen"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/guests"
@@ -19,26 +18,39 @@ type apiServerCodegenWrapper struct {
 var (
 	conf   *config.AppConfig
 	logger applog.Logger
+	served atomic.Uint64
 )
 
-func NewServer(basectx context.Context, l applog.Logger, c *config.AppConfig) *http.Server {
+func NewMux(basectx context.Context, l applog.Logger, c *config.AppConfig) http.Handler {
 	logger = l
 	conf = c
 
 	mux := chi.NewMux()
-	handler := apigen.HandlerFromMux(apiServerCodegenWrapper{}, mux)
+	mux.Use(func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			l.Info(r.Context(), applog.HTTP, "Beginning serving request")
+			h.ServeHTTP(w, r)
+			l.Info(r.Context(), applog.HTTP, "Finished serving request")
+		})
+	})
 
-	server := http.Server{
-		Addr:              conf.Server.ListenOn,
-		ReadHeaderTimeout: conf.Server.ReadHeaderTimout,
-		ReadTimeout:       conf.Server.ReadTimout,
-		Handler:           handler,
-		BaseContext: func(_ net.Listener) context.Context {
-			return basectx
-		},
+	// handler := apigen.HandlerFromMux(apiServerCodegenWrapper{}, mux)
+	mux.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("Healthy!"))
+	})
+
+	_ = http.Server{
+		Addr: conf.Server.ListenOn,
+		// ReadHeaderTimeout: conf.Server.ReadHeaderTimout,
+		// ReadTimeout:       conf.Server.ReadTimout,
+		// Handler:           handler,
+		Handler: mux,
+		// BaseContext: func(_ net.Listener) context.Context {
+		// 	return basectx
+		// },
 	}
 
-	return &server
+	return mux
 }
 
 func (apiServerCodegenWrapper) GetGuestsGuestId(w http.ResponseWriter, r *http.Request, guestId int) {

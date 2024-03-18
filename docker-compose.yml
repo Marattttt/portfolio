@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: portfolio
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: portfolio
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # networks:
+    #   - porfolio_network
+
+  gateway:
+    build: .
+    restart: always
+    depends_on:
+      - postgres
+    env_file: .env
+    environment:
+      - GOCACHE=/go/cache
+    ports:
+      - 3030:3030
+    volumes:
+      - type: bind
+        source: $GOCACHE
+        target: /go/cache
+
+    # networks:
+    #   - porfolio_network
+
+networks:
+  porfolio_network:
+
+volumes:
+  postgres_data:
