@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"log/slog"
 	"net"
 	"net/http"
 	"sync/atomic"
@@ -11,7 +10,7 @@ import (
 	"github.com/Marattttt/portfolio/portfolio_back/internal/api/apigen"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config"
-	"github.com/Marattttt/portfolio/portfolio_back/internal/guests"
+	"github.com/Marattttt/portfolio/portfolio_back/internal/users"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -50,14 +49,14 @@ func Server(basectx context.Context, l applog.Logger, c *config.AppConfig) *http
 func (apiServerCodegenWrapper) GetGuestsGuestId(w http.ResponseWriter, r *http.Request, guestId int) {
 	ctx := r.Context()
 
-	guests, err := guests.NewFromConfig(logger, conf)
+	guests, err := users.NewFromConfig(logger, conf)
 	if err != nil {
 		logger.Error(ctx, applog.Application|applog.Config, "failed to create guests service from config", err)
 		http.Error(w, "", http.StatusInternalServerError)
 		return
 	}
 
-	reuested := guests.GetGuest(ctx, guestId)
+	reuested := guests.Get(ctx, guestId)
 	if reuested == nil {
 		http.Error(w, "Not found", http.StatusNotFound)
 		return

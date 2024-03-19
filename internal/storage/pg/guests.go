@@ -13,81 +13,84 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type GuestsPGRepository struct {
+type UsersRepository struct {
 	pool   *pgxpool.Pool
 	logger applog.Logger
 }
 
-func NewGuestsPGRepository(conf dbconfig.DbConfig, l applog.Logger) (*GuestsPGRepository, error) {
+func NewUsersPGRepository(conf dbconfig.DbConfig, l applog.Logger) (*UsersRepository, error) {
 	if conf.Pool == nil {
 		return nil, fmt.Errorf("pgxpool.Pool is nil in dbconfig")
 	}
 
-	gpg := GuestsPGRepository{
+	repo := UsersRepository{
 		pool:   conf.Pool,
 		logger: l,
 	}
 
-	return &gpg, nil
+	return &repo, nil
 }
 
-func (g GuestsPGRepository) Get(ctx context.Context, id int) (*models.Guest, error) {
-	tx, err := g.pool.Begin(ctx)
+func (u UsersRepository) Get(ctx context.Context, id int) (*models.User, error) {
+	tx, err := u.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("beginning a transaction: %w", err)
 	}
 
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	guest, err := g.GetTx(ctx, &tx, id)
+	user, err := u.GetTx(ctx, &tx, id)
 	if err != nil {
 		return nil, err
 	}
 
 	_ = tx.Commit(ctx)
 
-	return guest, nil
+	return user, nil
 }
 
 // Returns nil if the entity was not found or has a non-null deletion time
-func (g GuestsPGRepository) GetTx(ctx context.Context, tx *pgx.Tx, id int) (*models.Guest, error) {
+func (u UsersRepository) GetTx(ctx context.Context, tx *pgx.Tx, id int) (*models.User, error) {
 	var err error
 
-	const q = `SELECT * FROM guests
+	const query = `
+		SELECT 
+			* FROM users
 		WHERE
 			guest_id = $1
-		LIMIT 1`
+		LIMIT 1
+	`
 
-	rows, err := (*tx).Query(ctx, q, id)
+	rows, err := (*tx).Query(ctx, query, id)
 	if err != nil {
-		return nil, fmt.Errorf("executing query %s: %w", q, err)
+		return nil, fmt.Errorf("executing query %s: %w", query, err)
 	}
 	defer rows.Close()
 
-	guests := storageutils.PGScanMany[models.Guest](ctx, g.logger, &rows)
+	users := storageutils.PGScanMany[models.User](ctx, u.logger, &rows)
 
-	if len(guests) == 0 {
+	if len(users) == 0 {
 		return nil, storage.EntityNotExistsError{ID: id}
 	}
-	if len(guests) > 1 {
-		return nil, fmt.Errorf("executing get by key %d returned %d entities, when expected to return 1", id, len(guests))
+	if len(users) > 1 {
+		return nil, fmt.Errorf("executing get by key %d returned %d entities, when expected to return 1", id, len(users))
 	}
 
-	return &guests[0], nil
+	return &users[0], nil
 }
 
 // The newG parameter will have its id updated if the operation is successful
 //
 // If the id of the entity is non-zero, a check for existing entity is performed,
 // and if one exists ErrEntityExists is returned
-func (g GuestsPGRepository) Create(ctx context.Context, newG *models.Guest) error {
-	tx, err := g.pool.Begin(ctx)
+func (u UsersRepository) Create(ctx context.Context, newU *models.User) error {
+	tx, err := u.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("beginning a transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	err = g.CreateTx(ctx, &tx, newG)
+	err = u.CreateTx(ctx, &tx, newU)
 	if err == nil {
 		_ = tx.Commit(ctx)
 		return nil
@@ -100,50 +103,54 @@ func (g GuestsPGRepository) Create(ctx context.Context, newG *models.Guest) erro
 //
 // If the id of the entity is non-zero, a check for existing entity is performed,
 // and if one exists ErrEntityExists is returned
-func (g GuestsPGRepository) CreateTx(ctx context.Context, tx *pgx.Tx, newG *models.Guest) error {
-	if newG.ID != 0 {
-		oldG, err := g.GetTx(ctx, tx, newG.ID)
+func (u UsersRepository) CreateTx(ctx context.Context, tx *pgx.Tx, newU *models.User) error {
+	if newU.ID != 0 {
+		oldU, err := u.GetTx(ctx, tx, newU.ID)
 		if err != nil {
 			return err
 		}
 
-		if oldG != nil {
-			return storage.EntityExistsError{ID: oldG.ID}
+		if oldU != nil {
+			return storage.EntityExistsError{ID: oldU.ID}
 		}
 	}
 
-	const q = `INSERT INTO guests
-		(name, salt, secret, created_at, deleted_at)
-		VALUES (@name, @salt, @secret, @created_at, @deleted_at)
-		RETURNIG id`
+	const query = `
+		INSERT INTO 
+			users
+			(name, salt, secret, created_at, deleted_at)
+		VALUES 
+			(@name, @salt, @secret, @created_at, @deleted_at)
+		RETURNIG id
+	`
 	args := pgx.NamedArgs{
-		"name":       newG.Name,
-		"salt":       newG.Salt,
-		"secret":     newG.Secret,
-		"created_at": newG.CreatedAt,
-		"deleted_at": newG.DeletedAt,
+		"name":       newU.Name,
+		"salt":       newU.Salt,
+		"secret":     newU.Secret,
+		"created_at": newU.CreatedAt,
+		"deleted_at": newU.DeletedAt,
 	}
 
-	rows := g.pool.QueryRow(ctx, q, args)
+	rows := u.pool.QueryRow(ctx, query, args)
 
 	var newID int
 
 	if err := rows.Scan(&newID); err != nil {
-		return fmt.Errorf("inserting %v into guests: %w", newG, err)
+		return fmt.Errorf("inserting %v into users: %w", newU, err)
 	}
 
-	newG.ID = newID
+	newU.ID = newID
 	return nil
 }
 
-func (g GuestsPGRepository) Update(ctx context.Context, guest *models.Guest) error {
-	tx, err := g.pool.Begin(ctx)
+func (u UsersRepository) Update(ctx context.Context, user *models.User) error {
+	tx, err := u.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("beginning transaction: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	err = g.Updatetx(ctx, &tx, guest)
+	err = u.Updatetx(ctx, &tx, user)
 	if err != nil {
 		return err
 	}
@@ -152,17 +159,17 @@ func (g GuestsPGRepository) Update(ctx context.Context, guest *models.Guest) err
 	return nil
 }
 
-func (g GuestsPGRepository) Updatetx(ctx context.Context, tx *pgx.Tx, guest *models.Guest) error {
-	old, err := g.GetTx(ctx, tx, guest.ID)
+func (u UsersRepository) Updatetx(ctx context.Context, tx *pgx.Tx, user *models.User) error {
+	old, err := u.GetTx(ctx, tx, user.ID)
 	if err != nil {
 		return err
 	}
 
 	if old == nil {
-		return storage.EntityNotExistsError{ID: guest.ID}
+		return storage.EntityNotExistsError{ID: user.ID}
 	}
 
-	const q = `UPDATE guests 
+	const query = `UPDATE users
 		SET 
 			name = @name,
 			salt = @salt,
@@ -174,17 +181,17 @@ func (g GuestsPGRepository) Updatetx(ctx context.Context, tx *pgx.Tx, guest *mod
 		RETURNING *`
 
 	args := pgx.NamedArgs{
-		"id":         guest.ID,
-		"name":       guest.Name,
-		"salt":       guest.Salt,
-		"secret":     guest.Secret,
-		"created_at": guest.CreatedAt,
-		"deleted_at": guest.DeletedAt,
+		"id":         user.ID,
+		"name":       user.Name,
+		"salt":       user.Salt,
+		"secret":     user.Secret,
+		"created_at": user.CreatedAt,
+		"deleted_at": user.DeletedAt,
 	}
 
-	rows, err := g.pool.Query(ctx, q, args)
+	rows, err := u.pool.Query(ctx, query, args)
 	if err != nil {
-		return fmt.Errorf("executing update query: %w", err)
+		return fmt.Errorf("Executing update query: %w", err)
 	}
 	defer rows.Close()
 
@@ -192,7 +199,7 @@ func (g GuestsPGRepository) Updatetx(ctx context.Context, tx *pgx.Tx, guest *mod
 		return storage.ErrNoEffect
 	}
 
-	results := storageutils.PGScanMany[models.Guest](ctx, g.logger, &rows)
+	results := storageutils.PGScanMany[models.User](ctx, u.logger, &rows)
 
 	if len(results) == 0 {
 		return storage.ErrNoEffect
@@ -201,21 +208,21 @@ func (g GuestsPGRepository) Updatetx(ctx context.Context, tx *pgx.Tx, guest *mod
 	if len(results) > 1 {
 		return fmt.Errorf(
 			"executing update by key %d caused %d updates; affected entitites; %v",
-			guest.ID, len(results), results)
+			user.ID, len(results), results)
 	}
 
-	guest.UpdateWith(results[0])
+	user.UpdateWith(results[0])
 
 	return nil
 }
 
-func (g GuestsPGRepository) Delete(ctx context.Context, id int) error {
-	tx, err := g.pool.Begin(ctx)
+func (u UsersRepository) Delete(ctx context.Context, id int) error {
+	tx, err := u.pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("beginning a transaction: %w", err)
 	}
 
-	err = g.DeleteTx(ctx, &tx, id)
+	err = u.DeleteTx(ctx, &tx, id)
 	if err != nil {
 		return err
 	}
@@ -223,11 +230,19 @@ func (g GuestsPGRepository) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
-func (g GuestsPGRepository) DeleteTx(ctx context.Context, tx *pgx.Tx, id int) error {
-	const q = "UPDATE guests SET deleted_at = CURRENT_TIMESTAMP WHERE id = @id RETURNING id"
+func (g UsersRepository) DeleteTx(ctx context.Context, tx *pgx.Tx, id int) error {
+	const query = `
+		UPDATE 
+			guests 
+		SET 
+			deleted_at = CURRENT_TIMESTAMP 
+		WHERE 
+			id = @id RETURNING id
+	`
+
 	args := pgx.NamedArgs{"id": id}
 
-	rows, err := (*tx).Query(ctx, q, args)
+	rows, err := (*tx).Query(ctx, query, args)
 	if err != nil {
 		return fmt.Errorf("executing delete by id %d: %w", id, err)
 	}

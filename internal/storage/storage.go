@@ -8,20 +8,20 @@ import (
 	"github.com/Marattttt/portfolio/portfolio_back/internal/models"
 )
 
-type GuestsRepository interface {
+type UsersRepository interface {
 	// Returns nil if the entity is not found or was deleted
-	Get(context.Context, int) (*models.Guest, error)
+	Get(context.Context, int) (*models.User, error)
 
-	// The newG parameter will have its id updated if the operation is successful
+	// The newU parameter will have its id updated if the operation is successful
 	//
 	// If the id of the entity is non-zero, a check for existing entity is performed,
 	// and if one exists ErrEntityExists is returned
-	Create(context.Context, *models.Guest) error
+	Create(context.Context, *models.User) error
 
-	// The newG parameter will have its id updated if the operation is successful
+	// The newU parameter will have its id updated if the operation is successful
 	//
 	// If entity does not exist, a EntityNotExistsError is returned
-	Update(context.Context, *models.Guest) error
+	Update(context.Context, *models.User) error
 
 	// Returns optional nil if error or valid int ptr of the deleted id
 	Delete(context.Context, int) error

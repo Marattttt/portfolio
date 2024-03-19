@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type Guest struct {
+type User struct {
 	ID     int    `db:"id"`
 	Name   string `db:"name"`
 	Salt   []byte `db:"salt"`
@@ -17,25 +17,25 @@ type Guest struct {
 	DeletedAt *time.Time `db:"deleted_at"`
 }
 
-func (g Guest) LogValue() slog.Value {
+func (u User) LogValue() slog.Value {
 	gvals := []slog.Attr{
-		slog.Int("id", g.ID),
-		slog.String("name", g.Name),
-		slog.Time("createdAt", g.CreatedAt),
+		slog.Int("id", u.ID),
+		slog.String("name", u.Name),
+		slog.Time("createdAt", u.CreatedAt),
 	}
 
-	if g.DeletedAt != nil {
-		gvals = append(gvals, slog.Time("deletedAt", *g.DeletedAt))
+	if u.DeletedAt != nil {
+		gvals = append(gvals, slog.Time("deletedAt", *u.DeletedAt))
 	}
 
 	return slog.GroupValue(gvals...)
 }
 
-func (g *Guest) UpdateWith(g1 Guest) {
-	g.ID = g1.ID
-	g.Name = g1.Name
-	g.Salt = g1.Salt
-	g.Secret = g1.Secret
-	g.CreatedAt = g1.CreatedAt
-	g.DeletedAt = g1.DeletedAt
+func (u *User) UpdateWith(g1 User) {
+	u.ID = g1.ID
+	u.Name = g1.Name
+	u.Salt = g1.Salt
+	u.Secret = g1.Secret
+	u.CreatedAt = g1.CreatedAt
+	u.DeletedAt = g1.DeletedAt
 }

@@ -1,4 +1,4 @@
-package guests
+package users
 
 import (
 	"context"
@@ -16,60 +16,60 @@ import (
 
 // Handles both guests and their visits
 // Transactions, if needed should be deined in the passed dbconn
-type Guests struct {
+type Users struct {
 	logger applog.Logger
-	db     storage.GuestsRepository
+	db     storage.UsersRepository
 }
 
-func New(l applog.Logger, repo storage.GuestsRepository) Guests {
-	return Guests{
+func New(l applog.Logger, repo storage.UsersRepository) Users {
+	return Users{
 		logger: l,
 		db:     repo,
 	}
 }
 
-func NewFromConfig(l applog.Logger, conf *config.AppConfig) (*Guests, error) {
-	var g Guests
+func NewFromConfig(l applog.Logger, conf *config.AppConfig) (*Users, error) {
+	var u Users
 
 	if conf.Storage.DB != nil {
-		err := g.addDb(l, *conf.Storage.DB)
+		err := u.addDb(l, *conf.Storage.DB)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return &g, nil
+	return &u, nil
 }
 
-func (g *Guests) addDb(l applog.Logger, conf dbconfig.DbConfig) error {
-	pg, err := pg.NewGuestsPGRepository(conf, l)
+func (u *Users) addDb(l applog.Logger, conf dbconfig.DbConfig) error {
+	pg, err := pg.NewUsersPGRepository(conf, l)
 	if err != nil {
-		return fmt.Errorf("creating pg guests repository: %w", err)
+		return fmt.Errorf("creating pg users repository: %w", err)
 	}
-	g.db = pg
+	u.db = pg
 	return nil
 }
 
 // Returns nil if any error is encountered
-func (g Guests) GetGuest(ctx context.Context, id int) *models.Guest {
-	guest, err := g.db.Get(ctx, id)
+func (u Users) Get(ctx context.Context, id int) *models.User {
+	user, err := u.db.Get(ctx, id)
 
 	if err != nil {
 		if errors.Is(err, storage.EntityNotExistsError{ID: id}) {
 			return nil
 		}
-		g.logger.Error(ctx, applog.DB, "failed to retrieve guest by id from db", err, slog.Int("entityId", id))
+		u.logger.Error(ctx, applog.DB, "failed to retrieve user by id from db", err, slog.Int("entityId", id))
 		return nil
 	}
 
-	return guest
+	return user
 }
 
-func (g Guests) NewGuest(ctx context.Context, guest models.Guest) (*models.Guest, error) {
-	err := g.db.Create(ctx, &guest)
+func (u Users) Create(ctx context.Context, user models.User) (*models.User, error) {
+	err := u.db.Create(ctx, &user)
 	if err != nil {
-		return nil, fmt.Errorf("creating in pg: %w", err)
+		return nil, fmt.Errorf("creating user in pg: %w", err)
 	}
 
-	return &guest, nil
+	return &user, nil
 }
