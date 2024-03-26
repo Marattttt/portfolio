@@ -6,10 +6,10 @@ import (
 )
 
 type User struct {
-	ID     int    `db:"id"`
-	Name   string `db:"name"`
-	Salt   []byte `db:"salt"`
-	Secret []byte `db:"secret"`
+	ID       int    `db:"user_id"`
+	Name     string `db:"name"`
+	Salt     []byte `db:"salt"`
+	Password []byte `db:"password"`
 
 	CreatedAt time.Time `db:"created_at"`
 
@@ -35,7 +35,7 @@ func (u *User) UpdateWith(g1 User) {
 	u.ID = g1.ID
 	u.Name = g1.Name
 	u.Salt = g1.Salt
-	u.Secret = g1.Secret
+	u.Password = g1.Password
 	u.CreatedAt = g1.CreatedAt
 	u.DeletedAt = g1.DeletedAt
 }

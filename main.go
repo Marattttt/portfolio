@@ -20,12 +20,11 @@ import (
 )
 
 func main() {
-	log.Println("ehe")
 	cancelsignals := []os.Signal{syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM}
 	appCtx, appcancel := signal.NotifyContext(context.Background(), cancelsignals...)
 	defer appcancel()
 
-	conf := initAppConfig()
+	conf := initAppConfig(appCtx)
 	printConfig(conf)
 
 	logger := initLogger(&conf)
@@ -96,8 +95,8 @@ func main() {
 	printErrors(logger, shutdownErrors)
 }
 
-func initAppConfig() config.AppConfig {
-	c, err := config.New()
+func initAppConfig(ctx context.Context) config.AppConfig {
+	c, err := config.New(ctx)
 	if err != nil {
 		log.Fatalf("while creating appconfig: %v\n", err)
 	}

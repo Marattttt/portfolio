@@ -60,7 +60,7 @@ components:
           type: string
         created:
           type: string
-          format: date
+          format: date-time
         profilePic:
           type: string
           format: binary

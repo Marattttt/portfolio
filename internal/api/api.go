@@ -2,7 +2,8 @@ package api
 
 import (
 	"context"
-	"encoding/json"
+	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"sync/atomic"
@@ -10,7 +11,6 @@ import (
 	"github.com/Marattttt/portfolio/portfolio_back/internal/api/apigen"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config"
-	"github.com/Marattttt/portfolio/portfolio_back/internal/users"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -18,62 +18,55 @@ type apiServerCodegenWrapper struct {
 	apigen.Unimplemented
 }
 
+type requestData struct {
+	id     uint64
+	logger applog.Logger
+}
+
 var (
 	conf   *config.AppConfig
-	logger applog.Logger
 	served atomic.Uint64
 )
 
-func Server(basectx context.Context, l applog.Logger, c *config.AppConfig) *http.Server {
-	logger = l
-	conf = c
+func Server(basectx context.Context, logger applog.Logger, appconfig *config.AppConfig) *http.Server {
+	conf = appconfig
 
 	mux := chi.NewMux()
-	mux.Use(logServedRequest)
+	// mux.Use(logServedRequest)
 
 	handler := apigen.HandlerFromMux(apiServerCodegenWrapper{}, mux)
 
+	address := fmt.Sprintf(":%d", conf.Server.ListenOn)
+
 	server := http.Server{
-		Addr:              conf.Server.ListenOn,
-		ReadHeaderTimeout: conf.Server.ReadHeaderTimout,
+		Addr:              address,
+		ReadHeaderTimeout: conf.Server.ReadHeaderTimeout,
 		ReadTimeout:       conf.Server.ReadTimout,
 		Handler:           handler,
+
 		BaseContext: func(_ net.Listener) context.Context {
-			return basectx
+			requestID := served.Add(1)
+			logCtx := context.WithValue(basectx, requestData{}, requestData{
+				id:     requestID,
+				logger: logger.With(slog.Uint64("requestID", requestID)),
+			})
+			return logCtx
 		},
 	}
 
 	return &server
 }
 
-func (apiServerCodegenWrapper) GetGuestsGuestId(w http.ResponseWriter, r *http.Request, guestId int) {
-	ctx := r.Context()
+// func (apiServerCodegenWrapper) PostRegistser(w http.ResponseWriter, r *http.Request) {
+// 	const maxBodyLength = 4000
+// 	var (
+// 		ctx          = r.Context()
+// 		logger       = ctx.Value("logger").(applog.Logger)
+// 		registerData = &apigen.RegisterRequest{}
+// 		body         = make([]byte, 0)
+// 	)
 
-	guests, err := users.NewFromConfig(logger, conf)
-	if err != nil {
-		logger.Error(ctx, applog.Application|applog.Config, "failed to create guests service from config", err)
-		http.Error(w, "", http.StatusInternalServerError)
-		return
-	}
-
-	reuested := guests.Get(ctx, guestId)
-	if reuested == nil {
-		http.Error(w, "Not found", http.StatusNotFound)
-		return
-	}
-
-	data, err := json.Marshal(reuested)
-	if err != nil {
-		logger.Error(ctx, applog.Generic, "Failed to encode guest model", err)
-	}
-
-	_, _ = w.Write(data)
-}
-
-func (apiServerCodegenWrapper) PostAuthorize(w http.ResponseWriter, r *http.Request) {
-
-}
-func (apiServerCodegenWrapper) PostGuests(w http.ResponseWriter, r *http.Request) {}
-
-func (apiServerCodegenWrapper) PatchGuestsGuestId(w http.ResponseWriter, r *http.Request, guestId int) {
-}
+// 	if _, err := r.Body.Read(body); err != nil {
+// 		logger.Error(ctx, applog.HTTP, "Failed to read request body", err)
+// 	}
+// }

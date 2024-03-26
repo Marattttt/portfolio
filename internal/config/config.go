@@ -3,24 +3,27 @@ package config
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config/logconfig"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config/serverconfig"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config/storageconfig"
-	"github.com/spf13/viper"
+	"github.com/sethvargo/go-envconfig"
 )
 
 type AppConfig struct {
-	Storage storageconfig.StorageConfig
-	Server  serverconfig.ServerConfig
-	Log     logconfig.LogConfig
+	Storage storageconfig.StorageConfig `env:", prefix=STORE_"`
+	Server  serverconfig.ServerConfig   `env:", prefix=SERVER_"`
+	Log     logconfig.LogConfig         `env:", prefix=LOG_"`
 
-	Mode Mode
+	ModeStr string `env:"MODE, default=DEBUG"`
+	Mode    Mode
 }
 
 func (c *AppConfig) Close(ctx context.Context) error {
-	return c.Storage.Close(ctx)
+	if err := c.Storage.Close(ctx); err != nil {
+		return fmt.Errorf("closing storage config: %w", err)
+	}
+	return nil
 }
 
 type Mode int
@@ -30,73 +33,44 @@ const (
 	Release
 )
 
-const (
-	modeEnv = "MODE"
-)
-
-// Defaults
-const (
-	defMode = Debug
-)
-
 // Returns a new config and a setup viper instance if there is no error;
 // If encounters an error, returns all nil except the error
-func New() (*AppConfig, error) {
+func New(ctx context.Context) (*AppConfig, error) {
 	conf := AppConfig{}
-	vpr := viper.New()
-	vpr.SetEnvPrefix("PORTFOLIO")
 
-	mode, err := getMode(vpr)
-	if err != nil {
+	if err := envconfig.Process(ctx, &conf); err != nil {
 		return nil, err
 	}
 
-	conf.Mode = mode
-
-	server, err := serverconfig.New(vpr)
-	if err != nil {
-		return nil, fmt.Errorf("creating server config: %w", err)
+	switch conf.ModeStr {
+	case "DEBUG":
+		conf.Mode = Debug
+	case "RELEASE":
+		conf.Mode = Release
+	default:
+		return nil, fmt.Errorf("application mode %s is not allowed", conf.ModeStr)
 	}
-	conf.Server = *server
-
-	db, err := storageconfig.New(vpr)
-	if err != nil {
-		return nil, fmt.Errorf("creating storage config: %w", err)
-	}
-	conf.Storage = *db
-
-	isDebug := conf.Mode == Debug
-	log, err := logconfig.New(vpr, isDebug)
-	if err != nil {
-		return nil, fmt.Errorf("creating log config: %w", err)
-	}
-	conf.Log = *log
+	// var (
+	// 	server serverconfig.ServerConfig
+	// 	db     storageconfig.StorageConfig
+	// 	log    logconfig.LogConfig
+	// )
+	//
+	// if err := envconfig.Process(ctx, &server); err != nil {
+	// 	return nil, fmt.Errorf("creating server config: %w", err)
+	// }
+	// conf.Server = server
+	//
+	// if err := envconfig.Process(ctx, &db); err != nil {
+	// 	return nil, fmt.Errorf("creating storage config: %w", err)
+	// }
+	// conf.Storage = db
+	//
+	// if err := envconfig.Process(ctx, &log); err != nil {
+	// 	return nil, fmt.Errorf("creating log config: %w", err)
+	// }
+	// conf.Log = log
+	//
 
 	return &conf, nil
-}
-
-// Binds the key with viper.bindenv, returns the value in lowercase or nil if unset
-func GetEnvString(vpr *viper.Viper, name string) *string {
-	_ = vpr.BindEnv(name)
-	res := strings.ToLower(vpr.GetString(name))
-	if res == "" {
-		return nil
-	}
-	return &res
-}
-
-func getMode(vpr *viper.Viper) (Mode, error) {
-	m := GetEnvString(vpr, modeEnv)
-	if m == nil {
-		return defMode, nil
-	}
-
-	switch *m {
-	case "debug":
-		return Debug, nil
-	case "release":
-		return Release, nil
-	default:
-		return defMode, fmt.Errorf("Invalid value for env variable %s = %s", modeEnv, *m)
-	}
 }

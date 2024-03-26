@@ -3,13 +3,11 @@ package dbconfig
 import (
 	"context"
 	"fmt"
-	"regexp"
-	"strings"
-	"time"
+	"log/slog"
 
-	"github.com/Marattttt/portfolio/portfolio_back/internal/config/configutils"
+	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
+	migrate "github.com/golang-migrate/migrate/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/spf13/viper"
 )
 
 // Stores a gorm.DB connection pointer, to share between requests, routines, etc.
@@ -17,87 +15,40 @@ type DbConfig struct {
 	Pool     *pgxpool.Pool `json:"-"`
 	poolConf *pgxpool.Config
 
-	Connstr    dbConnStr
-	ConnParams ConnParams
+	// Url to use when using go-migrate
+	// See https://github.com/golang-migrate/migrate
+	MigrationsURL string `env:"MIGRATIONMS, default=file://migrations"`
+
+	Conn              dbConnStr `required:"true"`
+	MaxConns          int       `env:"MAXCONNS, default=50"`
+	MaxConnLifetime   int       `env:"MAXCONNLIFETIME, default=30"`
+	HealthCheckPeriod int       `env:"HEALTHCHECKPERIOD, default=1"`
 }
 
-func (c *DbConfig) Close() error {
-	c.Pool.Close()
+func (c *DbConfig) Close(_ context.Context) error {
+	// FIXME: Cannot manually close a connecion on shutdown if it was not established successfully
+	// if c.Pool != nil {
+	// 	// Check for a working connection to detect possible issues
+	// 	// and avoid possible errors/panics inside the lib's code if there are any problems
+	// 	if err := c.Pool.Ping(ctx); err != nil {
+	// 		return err
+	// 	}
+	// 	c.Pool.Close()
+	// }
 	return nil
 }
 
-// Environment
-const (
-	envPrefix            = "DB_"
-	envConnStr           = envPrefix + "CONN"
-	envMaxConns          = envPrefix + "MAX_CONNS"
-	envMaxConnLifeTime   = envPrefix + "MAX_CONN_LIFETIME"
-	envHealthCheckPeriod = envPrefix + "HEALTH_CHECK_PERIOD"
-)
-
-// Defaults
-const (
-	defMaxConns          = 10
-	defMaxConnLifetime   = time.Hour
-	defHealthCheckPeriod = time.Minute
-)
-
-func New(vpr *viper.Viper) (*DbConfig, error) {
+func (c *DbConfig) CreatePool() error {
 	var config DbConfig
 
-	if err := config.fillParameters(vpr); err != nil {
-		return nil, err
+	if err := config.setPool(); err != nil {
+		return err
 	}
-
-	if err := config.addPool(); err != nil {
-		return nil, err
-	}
-
-	return &config, nil
-}
-
-// Fills-out all external values
-func (c *DbConfig) fillParameters(vpr *viper.Viper) error {
-	connStr := configutils.GetEnvString(vpr, envConnStr)
-
-	if connStr == nil {
-		return fmt.Errorf("DSN not provided")
-	}
-
-	c.Connstr = dbConnStr(*connStr)
-
-	c.fillConfigurations(vpr)
 
 	return nil
 }
 
-func (c *DbConfig) fillConfigurations(vpr *viper.Viper) {
-	params := &c.ConnParams
-	if env := configutils.GetEnvInt(vpr, envMaxConns); env == nil {
-		params.MaxConns = defMaxConns
-	} else {
-		params.MaxConns = *env
-	}
-
-	if env := configutils.GetEnvString(vpr, envMaxConnLifeTime); env == nil {
-		params.MaxConnLifeTime = defMaxConnLifetime
-	} else if parsed, err := time.ParseDuration(*env); err != nil {
-		params.MaxConnLifeTime = defMaxConnLifetime
-	} else {
-		params.MaxConnLifeTime = parsed
-	}
-
-	if env := configutils.GetEnvString(vpr, envHealthCheckPeriod); env == nil {
-		params.HealthCheckPeriod = defHealthCheckPeriod
-	} else if parsed, err := time.ParseDuration(*env); err != nil {
-		params.HealthCheckPeriod = defHealthCheckPeriod
-	} else {
-		params.HealthCheckPeriod = parsed
-	}
-}
-
-// Should be called after configuring the poolConfig
-func (c *DbConfig) addPool() error {
+func (c *DbConfig) setPool() error {
 	if c.poolConf == nil {
 		err := c.addPoolConfig()
 		if err != nil {
@@ -118,9 +69,9 @@ func (c *DbConfig) addPool() error {
 func (c *DbConfig) addPoolConfig() error {
 	c.setupDSN()
 
-	dbconf, err := pgxpool.ParseConfig(string(c.Connstr))
+	dbconf, err := pgxpool.ParseConfig(string(c.Conn))
 	if err != nil {
-		return fmt.Errorf("parsing dsn %s for pgxpool.Config: %w", c.Connstr, err)
+		return fmt.Errorf("parsing dsn %s for pgxpool.Config: %w", c.Conn, err)
 	}
 
 	c.poolConf = dbconf
@@ -133,71 +84,37 @@ func (c *DbConfig) setupDSN() {
 	var format string
 
 	//	postgres://jack:secret@pg.example.com:5432/mydb?sslmode=verify-ca&pool_max_conns=10
-	if isPGConnURL(string(c.Connstr)) {
+	if isPGConnURL(string(c.Conn)) {
 		format = `?pool_max_conns=%d&pool_max_conn_lifetime=%s&pool_health_check_period=%s&`
 	} else {
 		format = " pool_max_conns=%d pool_max_conn_lifetime=%s pool_health_check_period=%s"
 	}
-	dsn := string(c.Connstr) + fmt.Sprintf(
+	dsn := string(c.Conn) + fmt.Sprintf(
 		format,
-		defMaxConns,
-		defMaxConnLifetime,
-		defHealthCheckPeriod,
+		c.MaxConns,
+		c.MaxConnLifetime,
+		c.HealthCheckPeriod,
 	)
 
-	c.Connstr = dbConnStr(dsn)
+	c.Conn = dbConnStr(dsn)
 }
 
-func isPGConnURL(connstr string) bool {
-	r := regexp.MustCompile(`^[a-zA-Z]+://`)
-	location := r.FindStringIndex(connstr)
-
-	// Match is found and start is at the beginning of the string
-	return location != nil && location[0] == 0
-}
-
-func sanitizeConnURL(url string) string {
-	// From postgres://... match postgres://
-	cleanrgx := regexp.MustCompile(`^.*\:\/\/`)
-
-	// Trim the postgres:// part
-	clean := cleanrgx.ReplaceAllString(url, "")
-
-	// Isn't a connection string
-	if clean == url {
-		return url
+func (c *DbConfig) Migrate(ctx context.Context, logger applog.Logger) error {
+	m, err := migrate.New(
+		c.MigrationsURL,
+		string(c.Conn),
+	)
+	if err != nil {
+		return fmt.Errorf("preparing for migration: %w", err)
 	}
 
-	sensitiveEnd := strings.IndexRune(clean, '@')
-	passStart := strings.IndexRune(clean, ':')
-	parametersStart := strings.IndexRune(clean, '/')
+	logger.Info(ctx, applog.DB, "Beinning mirgation",
+		slog.String("source", c.MigrationsURL),
+		slog.String("connstr", string(c.Conn)))
 
-	if parametersStart == -1 {
-		parametersStart = len(url) - 1
+	if err := m.Up(); err != nil {
+		return fmt.Errorf("%w", err)
 	}
 
-	noSensitiveChars := sensitiveEnd == -1 || passStart == -1
-	noSensitiveData := sensitiveEnd > parametersStart || passStart > parametersStart || passStart > sensitiveEnd
-
-	if noSensitiveChars || noSensitiveData {
-		return url
-	}
-
-	if sensitiveEnd > parametersStart && passStart > parametersStart {
-		return url
-	}
-
-	userPass := clean[:sensitiveEnd]
-	userNoPass := userPass[:strings.IndexRune(userPass, ':')]
-	sanitizedUserPass := userNoPass + ":xxxxx"
-
-	clean = strings.Replace(url, userPass, sanitizedUserPass, 1)
-
-	return clean
-}
-
-func sanitizeDSN(dsn string) string {
-	r := regexp.MustCompile(`[ ;]?[pP]assword=[^ ;]+`)
-
-	return r.ReplaceAllString(dsn, "<password redacted>")
+	return nil
 }

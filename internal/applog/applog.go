@@ -17,6 +17,7 @@ type Logger interface {
 	Error(ctx context.Context, s Scope, msg string, err error, attrs ...slog.Attr)
 	Info(ctx context.Context, s Scope, msg string, attrs ...slog.Attr)
 	Warn(ctx context.Context, s Scope, msg string, attrs ...slog.Attr)
+	With(...any) Logger
 }
 
 type Scope int
@@ -129,12 +130,18 @@ func (l AppLogger) Debug(ctx context.Context, s Scope, msg string, attrs ...slog
 	scoped.LogAttrs(ctx, slog.LevelDebug, msg, attrs...)
 }
 
+// Example: requestLogger := logger.With("requestId", some-id)
+func (l AppLogger) With(args ...any) Logger {
+	l.out = l.out.With(args...)
+	return l
+}
+
 // Create new logger
 func New(conf logconfig.LogConfig) (*AppLogger, error) {
 	var logger AppLogger
 	logger.conf = &conf
 
-	if err := logger.configureOutput(conf.LogDest); err != nil {
+	if err := logger.configureOutput(conf.Destination); err != nil {
 		return nil, err
 	}
 

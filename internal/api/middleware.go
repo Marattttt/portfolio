@@ -7,7 +7,7 @@ import (
 	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
 )
 
-func logServedRequest(h http.Handler) http.Handler {
+func logServedRequest(h http.Handler, logger applog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		id := served.Add(1)
 

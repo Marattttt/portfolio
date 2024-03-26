@@ -4,15 +4,37 @@ import (
 	"log"
 
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config/configutils"
-	"github.com/spf13/viper"
 )
 
 // All string values are lowercase
 type LogConfig struct {
-	LogDest     string
-	Format      LogFormat
-	IsDebugMode bool
-	Flags       LogFlags `json:"-"`
+	Destination  string `env:"DEST, default=stdout"`
+	FormatString string `env:"FORMAT, default=json"`
+	Format       LogFormat
+	IsDebugMode  bool
+	Flags        LogFlags
+}
+
+type LogFormat int
+
+const (
+	JSONFormat = iota
+	TextFormat
+)
+
+func (f LogFormat) String() string {
+	switch f {
+	case JSONFormat:
+		return "json"
+	case TextFormat:
+		return "text"
+	default:
+		return "unidentified"
+	}
+}
+
+func (f LogFormat) MarshalText() (text []byte, err error) {
+	return []byte(f.String()), nil
 }
 
 type LogFlags struct {
@@ -22,73 +44,45 @@ type LogFlags struct {
 	Warn  int
 }
 
+// Log flags
 const (
-	envPrefix = "LOG_"
-	envFormat = envPrefix + "FORMAT"
-	envDest   = envPrefix + "DEST"
+	debugFlags = log.Ltime | log.Lmicroseconds | log.Lshortfile
+	errorFlags = log.Ldate | log.Ltime | log.Lshortfile
+	warnFlags  = log.Ldate | log.Ltime | log.Lshortfile
+	infoFlags  = log.Ldate | log.Ltime
 )
 
-// Defaults
-const (
-	defLogDest = "applog.log"
-	defFormat  = JSONFormat
-
-	defDebugFlags = log.Ltime | log.Lmicroseconds | log.Lshortfile
-	defErrorFlags = log.Ldate | log.Ltime | log.Lshortfile
-	defWarnFlags  = log.Ldate | log.Ltime | log.Lshortfile
-	defInfoFlags  = log.Ldate | log.Ltime
-)
-
-func New(vpr *viper.Viper, isDebugMode bool) (*LogConfig, error) {
+func New(isDebugMode bool) (*LogConfig, error) {
 	var conf LogConfig
 	conf.IsDebugMode = isDebugMode
 	conf.setDefaultFlags()
 
-	conf.setupDest(vpr)
-
-	if err := conf.setupFormat(vpr); err != nil {
+	if err := conf.setupFormat(); err != nil {
 		return nil, err
 	}
 
 	return &conf, nil
 }
 
-func (c *LogConfig) setupDest(vpr *viper.Viper) {
-	if dest := configutils.GetEnvString(vpr, envDest); dest == nil {
-		c.LogDest = defLogDest
-	} else {
-		c.LogDest = *dest
-	}
-}
-
-func (c *LogConfig) setupFormat(vpr *viper.Viper) error {
-	var formatStr *string
-
+func (c *LogConfig) setupFormat() error {
 	allowed := map[string]LogFormat{
 		"json": JSONFormat,
 		"text": TextFormat,
 	}
 
-	if formatStr = configutils.GetEnvString(vpr, envFormat); formatStr == nil {
-		c.Format = defFormat
-		return nil
-	}
-
-	format, ok := allowed[*formatStr]
-
-	if !ok {
-		err := configutils.NewErrValueNotAllowed(envFormat, *formatStr, []string{"json", "text"})
+	if _, ok := allowed[c.FormatString]; !ok {
+		err := configutils.NewErrValueNotAllowed(c.FormatString, c.FormatString, []string{"json", "text"})
 		return err
 	}
 
-	c.Format = format
+	c.Format = allowed[c.FormatString]
 
 	return nil
 }
 
 func (c *LogConfig) setDefaultFlags() {
-	c.Flags.Debug = defDebugFlags
-	c.Flags.Error = defErrorFlags
-	c.Flags.Info = defInfoFlags
-	c.Flags.Warn = defWarnFlags
+	c.Flags.Debug = debugFlags
+	c.Flags.Error = errorFlags
+	c.Flags.Info = infoFlags
+	c.Flags.Warn = warnFlags
 }

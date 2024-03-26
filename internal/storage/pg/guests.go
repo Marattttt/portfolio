@@ -126,7 +126,7 @@ func (u UsersRepository) CreateTx(ctx context.Context, tx *pgx.Tx, newU *models.
 	args := pgx.NamedArgs{
 		"name":       newU.Name,
 		"salt":       newU.Salt,
-		"secret":     newU.Secret,
+		"secret":     newU.Password,
 		"created_at": newU.CreatedAt,
 		"deleted_at": newU.DeletedAt,
 	}
@@ -184,7 +184,7 @@ func (u UsersRepository) Updatetx(ctx context.Context, tx *pgx.Tx, user *models.
 		"id":         user.ID,
 		"name":       user.Name,
 		"salt":       user.Salt,
-		"secret":     user.Secret,
+		"secret":     user.Password,
 		"created_at": user.CreatedAt,
 		"deleted_at": user.DeletedAt,
 	}
