@@ -19,7 +19,7 @@ type DbConfig struct {
 	// See https://github.com/golang-migrate/migrate
 	MigrationsURL string `env:"MIGRATIONMS, default=file://migrations"`
 
-	Conn              dbConnStr `required:"true"`
+	Conn              dbConnStr `env:"CONN, required"`
 	MaxConns          int       `env:"MAXCONNS, default=50"`
 	MaxConnLifetime   int       `env:"MAXCONNLIFETIME, default=30"`
 	HealthCheckPeriod int       `env:"HEALTHCHECKPERIOD, default=1"`
@@ -38,7 +38,7 @@ func (c *DbConfig) Close(_ context.Context) error {
 	return nil
 }
 
-func (c *DbConfig) CreatePool() error {
+func (c *DbConfig) Configure() error {
 	var config DbConfig
 
 	if err := config.setPool(); err != nil {
@@ -81,14 +81,8 @@ func (c *DbConfig) addPoolConfig() error {
 
 // DSN is setup with pgxpool additional parameters
 func (c *DbConfig) setupDSN() {
-	var format string
+	var format = `?pool_max_conns=%d&pool_max_conn_lifetime=%d&pool_health_check_period=%d&`
 
-	//	postgres://jack:secret@pg.example.com:5432/mydb?sslmode=verify-ca&pool_max_conns=10
-	if isPGConnURL(string(c.Conn)) {
-		format = `?pool_max_conns=%d&pool_max_conn_lifetime=%s&pool_health_check_period=%s&`
-	} else {
-		format = " pool_max_conns=%d pool_max_conn_lifetime=%s pool_health_check_period=%s"
-	}
 	dsn := string(c.Conn) + fmt.Sprintf(
 		format,
 		c.MaxConns,

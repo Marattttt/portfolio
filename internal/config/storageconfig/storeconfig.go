@@ -10,6 +10,10 @@ type StorageConfig struct {
 	DB *dbconfig.DbConfig `env:", prefix=DB_"`
 }
 
+func (c *StorageConfig) Configure() error {
+	return c.DB.Configure()
+}
+
 func (c *StorageConfig) Close(ctx context.Context) error {
 	var err error
 	if c.DB != nil {

@@ -50,6 +50,10 @@ func New(ctx context.Context) (*AppConfig, error) {
 	default:
 		return nil, fmt.Errorf("application mode %s is not allowed", conf.ModeStr)
 	}
+
+	if err := conf.Storage.Configure(); err != nil {
+		return nil, fmt.Errorf("configuring storage: %w", err)
+	}
 	// var (
 	// 	server serverconfig.ServerConfig
 	// 	db     storageconfig.StorageConfig
