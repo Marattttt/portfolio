@@ -6,7 +6,9 @@ import (
 	"log/slog"
 
 	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
-	migrate "github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -20,6 +22,7 @@ type DbConfig struct {
 	MigrationsURL string `env:"MIGRATIONMS, default=file://migrations"`
 
 	Conn              dbConnStr `env:"CONN, required"`
+	ConnRaw           string    `json:"-" env:"CONN, required"`
 	MaxConns          int       `env:"MAXCONNS, default=50"`
 	MaxConnLifetime   int       `env:"MAXCONNLIFETIME, default=30"`
 	HealthCheckPeriod int       `env:"HEALTHCHECKPERIOD, default=1"`
@@ -67,7 +70,7 @@ func (c *DbConfig) setPool() error {
 
 // Parses the poolconfig from dsn
 func (c *DbConfig) addPoolConfig() error {
-	c.setupDSN()
+	c.setupConnParams()
 
 	dbconf, err := pgxpool.ParseConfig(string(c.Conn))
 	if err != nil {
@@ -80,10 +83,10 @@ func (c *DbConfig) addPoolConfig() error {
 }
 
 // DSN is setup with pgxpool additional parameters
-func (c *DbConfig) setupDSN() {
+func (c *DbConfig) setupConnParams() {
 	var format = `?pool_max_conns=%d&pool_max_conn_lifetime=%d&pool_health_check_period=%d&`
 
-	dsn := string(c.Conn) + fmt.Sprintf(
+	dsn := c.ConnRaw + fmt.Sprintf(
 		format,
 		c.MaxConns,
 		c.MaxConnLifetime,
@@ -104,7 +107,7 @@ func (c *DbConfig) Migrate(ctx context.Context, logger applog.Logger) error {
 
 	logger.Info(ctx, applog.DB, "Beinning mirgation",
 		slog.String("source", c.MigrationsURL),
-		slog.String("connstr", string(c.Conn)))
+		slog.String("connstr", c.ConnRaw))
 
 	if err := m.Up(); err != nil {
 		return fmt.Errorf("%w", err)

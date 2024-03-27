@@ -101,9 +101,9 @@ func initLogger(conf *config.AppConfig) applog.AppLogger {
 }
 
 func serve(ctx context.Context, logger applog.Logger, server *http.Server) {
-	logger.Info(appCtx, applog.Application|applog.HTTP, "Starting server")
+	logger.Info(ctx, applog.Application|applog.HTTP, "Starting server")
 	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		logger.Error(appCtx, applog.Application, "Unexpected server shutdown", err)
+		logger.Error(ctx, applog.Application, "Unexpected server shutdown", err)
 	}
 }
 
