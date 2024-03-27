@@ -29,28 +29,13 @@ func main() {
 
 	logger := initLogger(&conf)
 
+	configure(appCtx, logger, conf)
+
 	server := api.Server(appCtx, logger, &conf)
 
-	// Serve
 	go func() {
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			logger.Error(appCtx, applog.Application, "Unexpected server shutdown", err)
-		}
+		serve(appCtx, logger, server)
 		appcancel()
-	}()
-
-	// Debug
-	go func() {
-		counter := 0
-		for {
-			select {
-			case <-appCtx.Done():
-				return
-			case <-time.After(time.Second * 2):
-				logger.Debug(context.Background(), applog.Application, "Still working", slog.Int("counter", counter))
-				counter++
-			}
-		}
 	}()
 
 	// Wait for shutdown
@@ -77,22 +62,26 @@ func main() {
 		shutdownSuccess <- struct{}{}
 	}()
 
+	waitShutdown(shutdownSuccess, timeoutCtx, logger)
+
+	printErrors(logger, shutdownErrors)
+}
+
+func waitShutdown(success chan struct{}, timeout context.Context, logger applog.Logger) {
 	select {
-	case <-shutdownSuccess:
+	case <-success:
 		logger.Info(
-			timeoutCtx,
+			timeout,
 			applog.Application,
 			"Shutdown complete",
 		)
-	case <-timeoutCtx.Done():
+	case <-timeout.Done():
 		logger.Error(
 			context.Background(),
 			applog.Application,
 			"Shutdown timed out",
-			fmt.Errorf("shutting down took longer than %s", shutdownTimeout.String()))
+			fmt.Errorf("Shutdown timeout exceeded"))
 	}
-
-	printErrors(logger, shutdownErrors)
 }
 
 func initAppConfig(ctx context.Context) config.AppConfig {
@@ -111,6 +100,19 @@ func initLogger(conf *config.AppConfig) applog.AppLogger {
 	return *l
 }
 
+func serve(ctx context.Context, logger applog.Logger, server *http.Server) {
+	logger.Info(appCtx, applog.Application|applog.HTTP, "Starting server")
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		logger.Error(appCtx, applog.Application, "Unexpected server shutdown", err)
+	}
+}
+
+func configure(ctx context.Context, logger applog.Logger, conf config.AppConfig) {
+	if err := conf.Configure(ctx, logger); err != nil {
+		logger.Error(ctx, applog.Application, "Failed to configure on startup", err)
+		os.Exit(1)
+	}
+}
 func printConfig(conf config.AppConfig) {
 	marshalledConf, err := json.MarshalIndent(conf, "", strings.Repeat(" ", 4))
 	if err != nil {

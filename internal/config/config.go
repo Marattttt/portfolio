@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config/logconfig"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config/serverconfig"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config/storageconfig"
@@ -51,30 +52,14 @@ func New(ctx context.Context) (*AppConfig, error) {
 		return nil, fmt.Errorf("application mode %s is not allowed", conf.ModeStr)
 	}
 
-	if err := conf.Storage.Configure(); err != nil {
-		return nil, fmt.Errorf("configuring storage: %w", err)
-	}
-	// var (
-	// 	server serverconfig.ServerConfig
-	// 	db     storageconfig.StorageConfig
-	// 	log    logconfig.LogConfig
-	// )
-	//
-	// if err := envconfig.Process(ctx, &server); err != nil {
-	// 	return nil, fmt.Errorf("creating server config: %w", err)
-	// }
-	// conf.Server = server
-	//
-	// if err := envconfig.Process(ctx, &db); err != nil {
-	// 	return nil, fmt.Errorf("creating storage config: %w", err)
-	// }
-	// conf.Storage = db
-	//
-	// if err := envconfig.Process(ctx, &log); err != nil {
-	// 	return nil, fmt.Errorf("creating log config: %w", err)
-	// }
-	// conf.Log = log
-	//
-
 	return &conf, nil
+}
+
+// Runs configurations for components of the app
+func (c *AppConfig) Configure(ctx context.Context, logger applog.Logger) error {
+	if err := c.Storage.Configure(ctx, logger); err != nil {
+		return fmt.Errorf("configuring storage: %w", err)
+	}
+
+	return nil
 }
