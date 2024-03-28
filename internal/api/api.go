@@ -7,11 +7,13 @@ import (
 	"net"
 	"net/http"
 	"sync/atomic"
+	"time"
 
 	"github.com/Marattttt/portfolio/portfolio_back/internal/api/apigen"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type apiServerCodegenWrapper struct {
@@ -23,6 +25,10 @@ type requestData struct {
 	logger applog.Logger
 }
 
+type statusCodeResponseWriter struct {
+	http.ResponseWriter
+}
+
 var (
 	conf   *config.AppConfig
 	served atomic.Uint64
@@ -32,7 +38,28 @@ func Server(basectx context.Context, logger applog.Logger, appconfig *config.App
 	conf = appconfig
 
 	mux := chi.NewMux()
-	// mux.Use(logServedRequest)
+	mux.Use(middleware.Recoverer)
+
+	mux.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			data := ctx.Value(requestData{}).(requestData)
+
+			data.logger.Info(ctx, applog.HTTP, "New request")
+
+			start := time.Now()
+
+			wrapped := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			next.ServeHTTP(wrapped, r)
+
+			took := time.Since(start)
+			data.logger.Info(ctx,
+				applog.HTTP,
+				"Finished request",
+				slog.Duration("timeTook", took),
+				slog.Int("responseCode", wrapped.Status()))
+		})
+	})
 
 	handler := apigen.HandlerFromMux(apiServerCodegenWrapper{}, mux)
 
@@ -65,7 +92,6 @@ func Server(basectx context.Context, logger applog.Logger, appconfig *config.App
 // 		registerData = &apigen.RegisterRequest{}
 // 		body         = make([]byte, 0)
 // 	)
-
 // 	if _, err := r.Body.Read(body); err != nil {
 // 		logger.Error(ctx, applog.HTTP, "Failed to read request body", err)
 // 	}
