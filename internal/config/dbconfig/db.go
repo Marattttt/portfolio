@@ -2,6 +2,7 @@ package dbconfig
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -110,7 +111,11 @@ func (c *DbConfig) Migrate(ctx context.Context, logger applog.Logger) error {
 		slog.String("connstr", c.ConnRaw))
 
 	if err := m.Up(); err != nil {
-		return fmt.Errorf("%w", err)
+		if errors.Is(err, migrate.ErrNoChange) {
+			logger.Info(ctx, applog.DB|applog.Application, "Migrations already applied")
+		} else {
+			return fmt.Errorf("%w", err)
+		}
 	}
 
 	return nil

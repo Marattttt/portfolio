@@ -62,12 +62,12 @@ func main() {
 		shutdownSuccess <- struct{}{}
 	}()
 
-	waitShutdown(shutdownSuccess, timeoutCtx, logger)
+	waitShutdown(timeoutCtx, shutdownSuccess, logger)
 
 	printErrors(logger, shutdownErrors)
 }
 
-func waitShutdown(success chan struct{}, timeout context.Context, logger applog.Logger) {
+func waitShutdown(timeout context.Context, success chan struct{}, logger applog.Logger) {
 	select {
 	case <-success:
 		logger.Info(
