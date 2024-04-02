@@ -1,25 +1,39 @@
-package auth
+package localauth
 
 import (
 	"crypto/rand"
 	"fmt"
 
+	"github.com/Marattttt/portfolio/portfolio_back/internal/auth"
+	"github.com/Marattttt/portfolio/portfolio_back/internal/users"
 	"golang.org/x/crypto/bcrypt"
 )
 
-const (
-	// Max size for secret message
-	SecretLength = 72 - SaltSize
-
-	// Size of salt in bytes
-	SaltSize = 32
-)
-
-type DataTooLongError struct{}
-
-func (e DataTooLongError) Error() string {
-	return "Data too long"
+type Manager struct {
+	repo *users.Users
 }
+
+func NewManager(repository *users.Users) Manager {
+	return Manager{
+		repo: repository,
+	}
+}
+
+func (m Manager) Register(login auth.LoginData) error {
+	user, err := m.repo.GetName(login.Name)
+
+	salt, err := getRandomSalt()
+	if err != nil {
+		return err
+	}
+
+	hashed, err := hashSecret([]byte(login.Password), salt)
+	if err != nil {
+		return err
+	}
+}
+
+var DataTooLongError = fmt.Errorf("Provided data was too long")
 
 // Returns the hased password and the salt used to hash it
 func HashSecret(secret string) ([]byte, []byte, error) {

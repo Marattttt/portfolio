@@ -12,7 +12,10 @@ type UsersRepository interface {
 	// Returns nil if the entity is not found or was deleted
 	Get(context.Context, int) (*models.User, error)
 
-	// The newU parameter will have its id updated if the operation is successful
+	// Get uses by query parameter, returns empty slice if nothing is found
+	GetMany(context.Context, QueryParams) ([]models.User, error)
+
+	// The user parameter will have its id updated if the operation is successful
 	//
 	// If the id of the entity is non-zero, a check for existing entity is performed,
 	// and if one exists ErrEntityExists is returned
@@ -25,6 +28,11 @@ type UsersRepository interface {
 
 	// Returns optional nil if error or valid int ptr of the deleted id
 	Delete(context.Context, int) error
+}
+
+// Parameters for querying users
+type QueryParams struct {
+	Name *string
 }
 
 // Should be used only if the existence is an error, not to indicate that something simply exists

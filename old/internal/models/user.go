@@ -3,10 +3,14 @@ package models
 import (
 	"log/slog"
 	"time"
+
+	"github.com/Marattttt/portfolio/portfolio_back/internal/auth"
 )
 
 type User struct {
-	ID       int    `db:"user_id"`
+	ID int `db:"user_id"`
+
+	auth.LoginData
 	Name     string `db:"name"`
 	Salt     []byte `db:"salt"`
 	Password []byte `db:"password"`

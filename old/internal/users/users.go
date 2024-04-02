@@ -7,15 +7,10 @@ import (
 	"log/slog"
 
 	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
-	"github.com/Marattttt/portfolio/portfolio_back/internal/config"
-	"github.com/Marattttt/portfolio/portfolio_back/internal/config/dbconfig"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/models"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/storage"
-	"github.com/Marattttt/portfolio/portfolio_back/internal/storage/pg"
 )
 
-// Handles both guests and their visits
-// Transactions, if needed should be deined in the passed dbconn
 type Users struct {
 	logger applog.Logger
 	db     storage.UsersRepository
@@ -26,28 +21,6 @@ func New(l applog.Logger, repo storage.UsersRepository) Users {
 		logger: l,
 		db:     repo,
 	}
-}
-
-func NewFromConfig(l applog.Logger, conf *config.AppConfig) (*Users, error) {
-	var u Users
-
-	if conf.Storage.DB != nil {
-		err := u.addDb(l, *conf.Storage.DB)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &u, nil
-}
-
-func (u *Users) addDb(l applog.Logger, conf dbconfig.DbConfig) error {
-	pg, err := pg.NewUsersPGRepository(conf, l)
-	if err != nil {
-		return fmt.Errorf("creating pg users repository: %w", err)
-	}
-	u.db = pg
-	return nil
 }
 
 // Returns nil if any error is encountered
@@ -63,6 +36,10 @@ func (u Users) Get(ctx context.Context, id int) *models.User {
 	}
 
 	return user
+}
+
+func (u Users) GetName(ctx context.Context, name string) {
+
 }
 
 func (u Users) Create(ctx context.Context, user models.User) (*models.User, error) {

@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net"
@@ -12,6 +13,7 @@ import (
 	"github.com/Marattttt/portfolio/portfolio_back/internal/api/apigen"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/config"
+	"github.com/Marattttt/portfolio/portfolio_back/internal/users"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
@@ -84,15 +86,29 @@ func Server(basectx context.Context, logger applog.Logger, appconfig *config.App
 	return &server
 }
 
-// func (apiServerCodegenWrapper) PostRegistser(w http.ResponseWriter, r *http.Request) {
-// 	const maxBodyLength = 4000
-// 	var (
-// 		ctx          = r.Context()
-// 		logger       = ctx.Value("logger").(applog.Logger)
-// 		registerData = &apigen.RegisterRequest{}
-// 		body         = make([]byte, 0)
-// 	)
-// 	if _, err := r.Body.Read(body); err != nil {
-// 		logger.Error(ctx, applog.HTTP, "Failed to read request body", err)
-// 	}
-// }
+func (apiServerCodegenWrapper) PostRegistser(w http.ResponseWriter, r *http.Request) {
+	var (
+		ctx          = r.Context()
+		logger       = ctx.Value("logger").(applog.Logger)
+		registerData = &apigen.RegisterRequest{}
+		body         = make([]byte, 0)
+	)
+	if _, err := r.Body.Read(body); err != nil {
+		logger.Error(ctx, applog.HTTP, "Failed to read request body", err)
+		http.Error(w, "Invalid body", http.StatusBadRequest)
+		return
+	}
+
+	if err := json.Unmarshal(body, &registerData); err != nil {
+		logger.Error(ctx, applog.HTTP, "Failed to unmarshal request", err)
+		http.Error(w, "Could not unmarshall request", http.StatusBadRequest)
+		return
+	}
+
+	users, err := users.NewFromConfig(logger, conf)
+	if err != nil {
+		logger.Error(ctx, applog.HTTP, "Could not create users service", err)
+		http.Error(w, "Internal", http.StatusBadGateway)
+		return
+	}
+}

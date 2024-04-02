@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE your_table_name ADD COLUMN IF NOT EXISTS salt TEXT;
+
+END;
+

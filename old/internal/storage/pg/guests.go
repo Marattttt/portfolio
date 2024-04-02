@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/Marattttt/portfolio/portfolio_back/internal/applog"
-	"github.com/Marattttt/portfolio/portfolio_back/internal/config/dbconfig"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/models"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/storage"
 	"github.com/Marattttt/portfolio/portfolio_back/internal/storage/storageutils"
@@ -18,17 +17,11 @@ type UsersRepository struct {
 	logger applog.Logger
 }
 
-func NewUsersPGRepository(conf dbconfig.DbConfig, l applog.Logger) (*UsersRepository, error) {
-	if conf.Pool == nil {
-		return nil, fmt.Errorf("pgxpool.Pool is nil in dbconfig")
+func New(pool *pgxpool.Pool, logger applog.Logger) UsersRepository {
+	return UsersRepository{
+		pool:   pool,
+		logger: logger,
 	}
-
-	repo := UsersRepository{
-		pool:   conf.Pool,
-		logger: l,
-	}
-
-	return &repo, nil
 }
 
 func (u UsersRepository) Get(ctx context.Context, id int) (*models.User, error) {
@@ -57,7 +50,7 @@ func (u UsersRepository) GetTx(ctx context.Context, tx *pgx.Tx, id int) (*models
 		SELECT 
 			* FROM users
 		WHERE
-			guest_id = $1
+			user_id = $1
 		LIMIT 1
 	`
 
@@ -77,6 +70,31 @@ func (u UsersRepository) GetTx(ctx context.Context, tx *pgx.Tx, id int) (*models
 	}
 
 	return &users[0], nil
+}
+
+func (u UsersRepository) GetName(ctx context.Context, paramgs storage.QueryParams) ([]models.User, error) {
+
+	return nil, nil
+}
+
+func (u UsersRepository) GetNameTx(ctx context.Context, tx *pgx.Tx, params storage.QueryParams) ([]models.User, error) {
+
+}
+
+func generateQuery(params storage.QueryParams) (string, pgx.NamedArgs) {
+	base := "FROM users SELECT * WHERE "
+	args := pgx.NamedArgs{}
+	isFirstParam := true
+	if params.Name != nil {
+		if !isFirstParam {
+			base += " AND "
+		}
+		base += "name = @name"
+		args["name"] = *params.Name
+	}
+
+	return base
+
 }
 
 // The newG parameter will have its id updated if the operation is successful
@@ -118,15 +136,15 @@ func (u UsersRepository) CreateTx(ctx context.Context, tx *pgx.Tx, newU *models.
 	const query = `
 		INSERT INTO 
 			users
-			(name, salt, secret, created_at, deleted_at)
+			(name, salt, password, created_at, deleted_at)
 		VALUES 
-			(@name, @salt, @secret, @created_at, @deleted_at)
+			(@name, @salt, @password, @created_at, @deleted_at)
 		RETURNIG id
 	`
 	args := pgx.NamedArgs{
 		"name":       newU.Name,
 		"salt":       newU.Salt,
-		"secret":     newU.Password,
+		"password":   newU.Password,
 		"created_at": newU.CreatedAt,
 		"deleted_at": newU.DeletedAt,
 	}
@@ -173,7 +191,7 @@ func (u UsersRepository) Updatetx(ctx context.Context, tx *pgx.Tx, user *models.
 		SET 
 			name = @name,
 			salt = @salt,
-			secret = @secret,
+			password = @password,
 			created_at = @created_at,
 			deleted_at = @deleted_at
 		WHERE 
@@ -184,7 +202,7 @@ func (u UsersRepository) Updatetx(ctx context.Context, tx *pgx.Tx, user *models.
 		"id":         user.ID,
 		"name":       user.Name,
 		"salt":       user.Salt,
-		"secret":     user.Password,
+		"password":   user.Password,
 		"created_at": user.CreatedAt,
 		"deleted_at": user.DeletedAt,
 	}

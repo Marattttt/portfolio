@@ -1,0 +1,32 @@
+linters:
+  enable:
+    - bodyclose
+    - decorder
+    - dupl
+    - errname
+    - exportloopref
+    - funlen
+    - goconst
+    - godox
+    - goimports
+    - goprintffuncname
+    - gosec
+    - ifshort
+    - ireturn
+    - lll
+    - maintidx
+    - misspell
+    - nilnil
+    - prealloc
+    - revive
+    - rowserrcheck
+    - sloglint
+    - unconvert
+    - unparam
+    - unused
+    - wastedassign
+    - whitespace
+
+run:
+  skip-dirs:
+    - ~/go/pkg
